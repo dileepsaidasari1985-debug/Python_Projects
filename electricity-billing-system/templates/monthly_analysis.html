@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% block title %}Monthly Comparison{% endblock %}
+{% block page_title %}Monthly Consumption Comparison{% endblock %}
+{% block page_subtitle %}Compare units consumed and electricity charges month by month using Python loops and nested lists{% endblock %}
+
+{% block content %}
+<section class="card">
+  <div class="card-header">
+    <div>
+      <h2>Scope Selection</h2>
+      <p class="card-sub">
+        {% if selected_household %}
+          Viewing monthly trends for <strong>{{ selected_household.household_id }} — {{ selected_household.consumer_name }}</strong>
+        {% else %}
+          Viewing aggregated monthly trends across <strong>all registered households</strong>
+        {% endif %}
+      </p>
+    </div>
+    <form method="GET" action="{{ url_for('monthly_analysis_page') }}" class="inline-filter-form">
+      <label for="analysis_household">Filter Household</label>
+      <select id="analysis_household" name="household_ref_id">
+        <option value="">All Households (Aggregate)</option>
+        {% for h in households %}
+          <option value="{{ h.id }}" {% if selected_household_id|string == h.id|string %}selected{% endif %}>
+            {{ h.household_id }} — {{ h.consumer_name }}
+          </option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn btn-secondary btn-sm">Compare</button>
+    </form>
+  </div>
+</section>
+
+<!-- Summary Cards -->
+<section class="kpi-grid">
+  <article class="kpi-card kpi-highlight">
+    <div class="kpi-label">Total Consumption</div>
+    <div class="kpi-value">{{ "%.1f"|format(analysis.total_consumption) }} kWh</div>
+    <div class="kpi-meta">Total billed: {{ format_inr(analysis.total_billing) }}</div>
+  </article>
+
+  <article class="kpi-card">
+    <div class="kpi-label">Average Monthly Consumption</div>
+    <div class="kpi-value">{{ "%.1f"|format(analysis.avg_consumption) }} kWh</div>
+    <div class="kpi-meta">Across {{ analysis.monthly_rows|length }} month(s)</div>
+  </article>
+
+  <article class="kpi-card kpi-warning">
+    <div class="kpi-label">Highest Consumption Month</div>
+    {% if analysis.highest_month %}
+      <div class="kpi-value">{{ analysis.highest_month.month_label }}</div>
+      <div class="kpi-meta">{{ "%.1f"|format(analysis.highest_month.units) }} kWh • {{ format_inr(analysis.highest_month.total_bill) }}</div>
+    {% else %}
+      <div class="kpi-value">—</div>
+      <div class="kpi-meta">No data</div>
+    {% endif %}
+  </article>
+
+  <article class="kpi-card kpi-success">
+    <div class="kpi-label">Lowest Consumption Month</div>
+    {% if analysis.lowest_month %}
+      <div class="kpi-value">{{ analysis.lowest_month.month_label }}</div>
+      <div class="kpi-meta">{{ "%.1f"|format(analysis.lowest_month.units) }} kWh • {{ format_inr(analysis.lowest_month.total_bill) }}</div>
+    {% else %}
+      <div class="kpi-value">—</div>
+      <div class="kpi-meta">No data</div>
+    {% endif %}
+  </article>
+</section>
+
+<!-- Charts -->
+<section class="charts-grid">
+  <article class="card">
+    <div class="card-header">
+      <div>
+        <h2>Month-Wise Consumption (kWh)</h2>
+        <p class="card-sub">Units consumed per billing month</p>
+      </div>
+    </div>
+    <div class="chart-box">
+      <canvas id="analysis-units-chart" class="chart-canvas" aria-label="Month-wise consumption chart"></canvas>
+    </div>
+  </article>
+
+  <article class="card">
+    <div class="card-header">
+      <div>
+        <h2>Month-Wise Bill Total (₹)</h2>
+        <p class="card-sub">Total electricity charges billed per month</p>
+      </div>
+    </div>
+    <div class="chart-box">
+      <canvas id="analysis-bills-chart" class="chart-canvas" aria-label="Month-wise bill chart"></canvas>
+    </div>
+  </article>
+</section>
+
+<!-- Monthly Comparison Table -->
+<section class="card">
+  <div class="card-header">
+    <div>
+      <h2>Month-to-Month Comparison Table</h2>
+      <p class="card-sub">Percentage Change = ((Current Month - Previous Month) / Previous Month) × 100 (zero previous consumption handled safely)</p>
+    </div>
+    <a href="{{ url_for('export_reports_csv', type='monthly') }}" class="btn btn-outline btn-sm">Download Monthly CSV</a>
+  </div>
+
+  {% if analysis.monthly_rows %}
+    <div tabindex="0" role="region" aria-labelledby="monthly-comparison-caption" class="table-wrapper">
+      <table class="data-table responsive-cards-table" style="--col-1: 'Month'; --col-2: 'Bills'; --col-3: 'Units'; --col-4: 'Energy Charge'; --col-5: 'Total Bill'; --col-6: 'Units % Change'; --col-7: 'Bill % Change';">
+        <caption id="monthly-comparison-caption" class="visually-hidden">Monthly electricity consumption and bill comparison</caption>
+        <thead>
+          <tr>
+            <th>Month</th>
+            <th class="num">Bills</th>
+            <th class="num">Units Consumed</th>
+            <th class="num">Energy Charge</th>
+            <th class="num">Total Bill</th>
+            <th class="num">Consumption Change (%)</th>
+            <th class="num">Bill Change (%)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in analysis.monthly_rows %}
+            <tr>
+              <th>{{ row.month_label }} <span class="muted-small">({{ row.month }})</span></th>
+              <td class="num">{{ row.bill_count }}</td>
+              <td class="num"><strong>{{ "%.1f"|format(row.units_consumed) }} kWh</strong></td>
+              <td class="num">{{ format_inr(row.energy_charge) }}</td>
+              <td class="num"><strong>{{ format_inr(row.total_bill) }}</strong></td>
+              <td class="num">
+                {% if row.pct_change_units is none %}
+                  <span class="muted-small">{% if row.prev_units == 0 %}N/A (Prev 0){% else %}Baseline{% endif %}</span>
+                {% elif row.pct_change_units > 0 %}
+                  <span class="delta-up">+{{ "%.2f"|format(row.pct_change_units) }}%</span>
+                {% elif row.pct_change_units < 0 %}
+                  <span class="delta-down">{{ "%.2f"|format(row.pct_change_units) }}%</span>
+                {% else %}
+                  <span>0.00%</span>
+                {% endif %}
+              </td>
+              <td class="num">
+                {% if row.pct_change_bill is none %}
+                  <span class="muted-small">Baseline</span>
+                {% elif row.pct_change_bill > 0 %}
+                  <span class="delta-up">+{{ "%.2f"|format(row.pct_change_bill) }}%</span>
+                {% elif row.pct_change_bill < 0 %}
+                  <span class="delta-down">{{ "%.2f"|format(row.pct_change_bill) }}%</span>
+                {% else %}
+                  <span>0.00%</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="empty-state">No monthly records available for comparison yet.</p>
+  {% endif %}
+</section>
+
+<script id="analysis-chart-data" type="application/json">{{ chart_payload | tojson }}</script>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const raw = document.getElementById("analysis-chart-data");
+    if (!raw || !window.VoltGridCharts) return;
+    const data = JSON.parse(raw.textContent);
+    window.VoltGridCharts.drawBarChart("analysis-units-chart", data.labels, data.units, {
+      unitSuffix: " kWh",
+      barColor: "#1d6fe8",
+      highlightColor: "#0b192c"
+    });
+    window.VoltGridCharts.drawLineChart("analysis-bills-chart", data.labels, data.bills, {
+      prefix: "₹",
+      lineColor: "#16a34a",
+      fillColor: "rgba(22, 163, 74, 0.14)"
+    });
+  });
+</script>
+{% endblock %}

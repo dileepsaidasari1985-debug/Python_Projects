@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% block title %}Reports & Analytics{% endblock %}
+{% block page_title %}Billing Reports &amp; CSV Analytics{% endblock %}
+{% block page_subtitle %}Comprehensive utility revenue, consumption rankings, anomaly summary, and built-in Python CSV exports{% endblock %}
+
+{% block content %}
+<!-- Export Actions -->
+<section class="action-bar no-print">
+  <div class="action-bar-links">
+    <a href="{{ url_for('export_reports_csv', type='all_bills') }}" class="btn btn-primary">Download Full Billing CSV</a>
+    <a href="{{ url_for('export_reports_csv', type='monthly') }}" class="btn btn-secondary">Download Monthly Summary CSV</a>
+    <a href="{{ url_for('export_reports_csv', type='unusual') }}" class="btn btn-outline">Download Unusual Warnings CSV</a>
+    <button type="button" class="btn btn-outline" data-print-btn>Print Report</button>
+  </div>
+</section>
+
+<!-- Summary KPIs -->
+<section class="kpi-grid">
+  <article class="kpi-card">
+    <div class="kpi-label">Total Households</div>
+    <div class="kpi-value">{{ summary.total_households }}</div>
+    <div class="kpi-meta">{{ summary.total_bills }} bills generated</div>
+  </article>
+  <article class="kpi-card kpi-highlight">
+    <div class="kpi-label">Total Consumption</div>
+    <div class="kpi-value">{{ "%.1f"|format(summary.total_consumption) }} kWh</div>
+    <div class="kpi-meta">Cumulative metered energy</div>
+  </article>
+  <article class="kpi-card kpi-highlight">
+    <div class="kpi-label">Total Billing Revenue</div>
+    <div class="kpi-value">{{ format_inr(summary.total_revenue) }}</div>
+    <div class="kpi-meta">Collected: {{ format_inr(summary.paid_revenue) }}</div>
+  </article>
+  <article class="kpi-card kpi-warning">
+    <div class="kpi-label">Total Surcharges</div>
+    <div class="kpi-value">{{ format_inr(summary.total_surcharges) }}</div>
+    <div class="kpi-meta">Unusual warnings: {{ summary.unusual_count }}</div>
+  </article>
+  <article class="kpi-card kpi-success">
+    <div class="kpi-label">Total Rebates Granted</div>
+    <div class="kpi-value">{{ format_inr(summary.total_rebates) }}</div>
+    <div class="kpi-meta">Incentive savings applied</div>
+  </article>
+  <article class="kpi-card">
+    <div class="kpi-label">Highest Consumption Household</div>
+    {% if summary.highest_household %}
+      <div class="kpi-value">{{ summary.highest_household.household_id }}</div>
+      <div class="kpi-meta">{{ summary.highest_household.consumer_name }} ({{ "%.1f"|format(summary.highest_household.total_units) }} kWh)</div>
+    {% else %}
+      <div class="kpi-value">—</div>
+      <div class="kpi-meta">No data</div>
+    {% endif %}
+  </article>
+  <article class="kpi-card">
+    <div class="kpi-label">Highest Single Bill</div>
+    {% if summary.highest_bill %}
+      <div class="kpi-value">{{ format_inr(summary.highest_bill.final_payable) }}</div>
+      <div class="kpi-meta">{{ summary.highest_bill.consumer_name }} ({{ format_month_label(summary.highest_bill.billing_month) }})</div>
+    {% else %}
+      <div class="kpi-value">—</div>
+      <div class="kpi-meta">No data</div>
+    {% endif %}
+  </article>
+</section>
+
+<!-- Monthly Totals & Household Ranking -->
+<div class="split-grid">
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <h2>Monthly Consumption &amp; Bill Totals</h2>
+        <p class="card-sub">Month-by-month energy and revenue totals</p>
+      </div>
+    </div>
+    {% if monthly_rows %}
+      <div tabindex="0" role="region" aria-labelledby="report-monthly-caption" class="table-wrapper">
+        <table class="data-table">
+          <caption id="report-monthly-caption" class="visually-hidden">Monthly consumption and billing totals</caption>
+          <thead>
+            <tr>
+              <th>Month</th>
+              <th class="num">Bills</th>
+              <th class="num">Total Units</th>
+              <th class="num">Total Billed</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in monthly_rows %}
+              <tr>
+                <th>{{ row.month_label }}</th>
+                <td class="num">{{ row.bill_count }}</td>
+                <td class="num">{{ "%.1f"|format(row.units_consumed) }} kWh</td>
+                <td class="num"><strong>{{ format_inr(row.total_bill) }}</strong></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="empty-state">No billing records available.</p>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <h2>Household Consumption Ranking</h2>
+        <p class="card-sub">Sorted by cumulative electricity usage</p>
+      </div>
+    </div>
+    {% if households %}
+      <div tabindex="0" role="region" aria-labelledby="report-hh-caption" class="table-wrapper">
+        <table class="data-table">
+          <caption id="report-hh-caption" class="visually-hidden">Households sorted by total consumption</caption>
+          <thead>
+            <tr>
+              <th>Household</th>
+              <th>Type</th>
+              <th class="num">Bills</th>
+              <th class="num">Units</th>
+              <th class="num">Total Billed</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for h in households %}
+              <tr>
+                <th>{{ h.household_id }} — {{ h.consumer_name }}</th>
+                <td>{{ h.connection_type }}</td>
+                <td class="num">{{ h.total_bills }}</td>
+                <td class="num">{{ "%.1f"|format(h.total_units) }} kWh</td>
+                <td class="num"><strong>{{ format_inr(h.total_billed) }}</strong></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="empty-state">No households registered.</p>
+    {% endif %}
+  </section>
+</div>
+
+<!-- Python Pattern Generation Output & Unusual Summary -->
+<div class="split-grid">
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <h2>Python Pattern Summary (Syllabus Demo)</h2>
+        <p class="card-sub">Generated using Python string repetition and loops</p>
+      </div>
+    </div>
+    <pre class="pattern-box">{{ pattern_preview }}</pre>
+  </section>
+
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <h2>Unusual Consumption Summary ({{ warnings|length }})</h2>
+        <p class="card-sub">Flagged records requiring review</p>
+      </div>
+      <a href="{{ url_for('unusual_consumption_page') }}" class="text-link">Full View →</a>
+    </div>
+    {% if warnings %}
+      <ul class="compact-warning-list">
+        {% for w in warnings[:6] %}
+          <li>
+            <div>
+              <strong>{{ w.household_id }} ({{ w.consumer_name }})</strong> — {{ w.month_label }}
+              <div class="muted-small">{{ w.reason_text }}</div>
+            </div>
+            <span class="delta-up">{{ "%.0f"|format(w.current_consumption) }} kWh</span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="empty-state">No unusual consumption records flagged.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

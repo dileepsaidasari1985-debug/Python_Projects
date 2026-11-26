@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% block title %}Bill {{ bill.bill_number }}{% endblock %}
+{% block page_title %}Electricity Bill Details{% endblock %}
+{% block page_subtitle %}Official progressive tariff statement for {{ bill.consumer_name }} ({{ bill.household_id }}){% endblock %}
+
+{% block content %}
+<!-- Action Bar -->
+<div class="action-bar no-print">
+  <div class="action-bar-links">
+    <button type="button" class="btn btn-primary" data-print-btn>Print Bill</button>
+    <a href="{{ url_for('download_single_bill_csv', bill_id=bill.id) }}" class="btn btn-secondary">Download Bill CSV</a>
+    <a href="{{ url_for('billing_history_page', household_ref_id=bill.household_ref_id) }}" class="btn btn-outline">View Previous Bills</a>
+  </div>
+  <form method="POST" action="{{ url_for('toggle_bill_status_route', bill_id=bill.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn {{ 'btn-outline' if bill.payment_status == 'Paid' else 'btn-accent' }}">
+      {% if bill.payment_status == 'Paid' %}Mark as Unpaid{% else %}Mark as Paid{% endif %}
+    </button>
+  </form>
+</div>
+
+<!-- Print-Friendly Official Bill Sheet -->
+<article class="card invoice-sheet">
+  <header class="invoice-header">
+    <div class="invoice-brand">
+      <img src="{{ url_for('static', filename='images/voltgrid_logo.svg') }}" alt="" width="48" height="48">
+      <div>
+        <h2>{{ rules.company_name }}</h2>
+        <p class="card-sub">Monthly Electricity Consumption &amp; Progressive Tariff Statement</p>
+      </div>
+    </div>
+    <div class="invoice-meta">
+      <div class="invoice-number">{{ bill.bill_number }}</div>
+      <div class="invoice-status">
+        <span class="badge {{ 'badge-success' if bill.payment_status == 'Paid' else 'badge-warning' }}">
+          {{ bill.payment_status }}
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <section class="invoice-info-grid">
+    <div class="info-box">
+      <h3>Consumer &amp; Connection Details</h3>
+      <dl class="mini-dl">
+        <div><dt>Consumer Name</dt><dd><strong>{{ bill.consumer_name }}</strong></dd></div>
+        <div><dt>Household ID</dt><dd><span class="code-pill">{{ bill.household_id }}</span></dd></div>
+        <div><dt>Meter Number</dt><dd><span class="code-pill">{{ bill.meter_number }}</span></dd></div>
+        <div><dt>Address</dt><dd>{{ bill.address }}, {{ bill.area }}</dd></div>
+        <div><dt>Category</dt><dd>{{ bill.connection_type }} • {{ bill.meter_category }}</dd></div>
+      </dl>
+    </div>
+
+    <div class="info-box">
+      <h3>Meter Reading &amp; Billing Period</h3>
+      <dl class="mini-dl">
+        <div><dt>Billing Month</dt><dd><strong>{{ format_month_label(bill.billing_month) }}</strong> ({{ bill.billing_month }})</dd></div>
+        <div><dt>Billing Date</dt><dd>{{ bill.billing_date }}</dd></div>
+        <div><dt>Previous Reading</dt><dd>{{ "%.2f"|format(bill.previous_reading) }} kWh</dd></div>
+        <div><dt>Current Reading</dt><dd>{{ "%.2f"|format(bill.current_reading) }} kWh</dd></div>
+        <div><dt>Total Units Consumed</dt><dd><strong class="units-highlight">{{ "%.2f"|format(bill.units_consumed) }} kWh</strong></dd></div>
+      </dl>
+    </div>
+  </section>
+
+  <section class="invoice-section">
+    <h3>Slab-Wise Progressive Energy Charges</h3>
+    <div tabindex="0" role="region" aria-labelledby="bill-slabs-caption" class="table-wrapper">
+      <table class="data-table">
+        <caption id="bill-slabs-caption" class="visually-hidden">Slab-wise electricity charge breakdown</caption>
+        <thead>
+          <tr>
+            <th>Slab Range</th>
+            <th class="num">Units in Slab</th>
+            <th class="num">Rate per Unit</th>
+            <th class="num">Slab Charge</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in bill.slab_items %}
+            <tr class="{% if item.units_in_slab > 0 %}row-active{% else %}row-muted{% endif %}">
+              <td>{{ item.slab_label }}</td>
+              <td class="num">{{ "%.2f"|format(item.units_in_slab) }}</td>
+              <td class="num">{{ format_inr(item.rate_per_unit) }}</td>
+              <td class="num"><strong>{{ format_inr(item.slab_charge) }}</strong></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="invoice-totals-box">
+    <dl class="charge-breakdown-list">
+      <div class="charge-row">
+        <dt>Total Progressive Energy Charge</dt>
+        <dd>{{ format_inr(bill.energy_charge) }}</dd>
+      </div>
+      <div class="charge-row">
+        <dt>(+) Fixed Monthly Charge</dt>
+        <dd>{{ format_inr(bill.fixed_charge) }}</dd>
+      </div>
+      <div class="charge-row">
+        <dt>(+) Electricity Duty</dt>
+        <dd>{{ format_inr(bill.electricity_duty) }}</dd>
+      </div>
+      <div class="charge-row {% if bill.surcharge_amount > 0 %}text-warning{% endif %}">
+        <dt>(+) Surcharge</dt>
+        <dd>{{ format_inr(bill.surcharge_amount) }}</dd>
+      </div>
+      <div class="charge-row {% if bill.rebate_amount > 0 %}text-success{% endif %}">
+        <dt>(-) Rebate</dt>
+        <dd>- {{ format_inr(bill.rebate_amount) }}</dd>
+      </div>
+      <div class="charge-row {% if bill.late_penalty_amount > 0 %}text-danger{% endif %}">
+        <dt>(+) Late Payment Penalty</dt>
+        <dd>{{ format_inr(bill.late_penalty_amount) }}</dd>
+      </div>
+      <div class="charge-row charge-total">
+        <dt>Final Payable Amount</dt>
+        <dd>{{ format_inr(bill.final_payable) }}</dd>
+      </div>
+    </dl>
+  </section>
+</article>
+
+{% if previous_bills|length > 1 %}
+<section class="card no-print">
+  <div class="card-header">
+    <div>
+      <h2>Household Billing History ({{ bill.household_id }})</h2>
+      <p class="card-sub">Previous and subsequent bills for {{ bill.consumer_name }}</p>
+    </div>
+  </div>
+  <div tabindex="0" role="region" aria-labelledby="hh-prev-bills-caption" class="table-wrapper">
+    <table class="data-table responsive-cards-table" style="--col-1: 'Bill No.'; --col-2: 'Month'; --col-3: 'Units'; --col-4: 'Energy'; --col-5: 'Final Bill'; --col-6: 'Status';">
+      <caption id="hh-prev-bills-caption" class="visually-hidden">Previous bills for {{ bill.consumer_name }}</caption>
+      <thead>
+        <tr>
+          <th>Bill Number</th>
+          <th>Billing Month</th>
+          <th class="num">Units</th>
+          <th class="num">Energy Charge</th>
+          <th class="num">Final Payable</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for pb in previous_bills %}
+          <tr class="{% if pb.id == bill.id %}row-active{% endif %}">
+            <th><a href="{{ url_for('bill_details_page', bill_id=pb.id) }}" class="table-link">{{ pb.bill_number }}</a></th>
+            <td>{{ format_month_label(pb.billing_month) }}</td>
+            <td class="num">{{ "%.1f"|format(pb.units_consumed) }} kWh</td>
+            <td class="num">{{ format_inr(pb.energy_charge) }}</td>
+            <td class="num"><strong>{{ format_inr(pb.final_payable) }}</strong></td>
+            <td><span class="badge {{ 'badge-success' if pb.payment_status == 'Paid' else 'badge-warning' }}">{{ pb.payment_status }}</span></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+{% if auto_print %}
+<script>
+  window.addEventListener("load", () => {
+    window.print();
+  });
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Household Management{% endblock %}
+{% block page_title %}Household Management{% endblock %}
+{% block page_subtitle %}Search, filter, update, or remove registered electricity consumers{% endblock %}
+
+{% block content %}
+<section class="card">
+  <div class="card-header">
+    <div>
+      <h2>Registered Households ({{ households|length }})</h2>
+      <p class="card-sub">Unique Household IDs and Meter Numbers stored in SQLite</p>
+    </div>
+    <div class="header-actions">
+      <a href="{{ url_for('add_household_page') }}" class="btn btn-primary">+ Register Household</a>
+    </div>
+  </div>
+
+  <!-- Search & Filter Form -->
+  <search class="filter-bar">
+    <form method="GET" action="{{ url_for('households_page') }}" class="filter-grid">
+      <div class="field">
+        <label for="search">Search Name / Meter / ID</label>
+        <input type="search" id="search" name="search" value="{{ search }}" placeholder="e.g. Aarav or MTR-1001" autocorrect="off" autocapitalize="none" spellcheck="false">
+      </div>
+      <div class="field">
+        <label for="area">Filter by Area</label>
+        <select id="area" name="area">
+          <option value="">All Areas</option>
+          {% for a in areas %}
+            <option value="{{ a }}" {% if selected_area == a %}selected{% endif %}>{{ a }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="connection_type">Connection Type</label>
+        <select id="connection_type" name="connection_type">
+          <option value="">All Types</option>
+          {% for ct in connection_types %}
+            <option value="{{ ct }}" {% if selected_connection == ct %}selected{% endif %}>{{ ct }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="filter-actions">
+        <button type="submit" class="btn btn-secondary">Apply Filter</button>
+        <a href="{{ url_for('households_page') }}" class="btn btn-outline">Reset</a>
+      </div>
+    </form>
+  </search>
+
+  {% if households %}
+    <div tabindex="0" role="region" aria-labelledby="households-table-caption" class="table-wrapper">
+      <table class="data-table responsive-cards-table" style="--col-1: 'Household ID'; --col-2: 'Consumer'; --col-3: 'Meter No.'; --col-4: 'Area'; --col-5: 'Type / Meter'; --col-6: 'Bills'; --col-7: 'Total Units'; --col-8: 'Actions';">
+        <caption id="households-table-caption" class="visually-hidden">Registered households directory</caption>
+        <thead>
+          <tr>
+            <th>Household ID</th>
+            <th>Consumer Name</th>
+            <th>Meter Number</th>
+            <th>Area / Locality</th>
+            <th>Connection &amp; Meter</th>
+            <th class="num">Bills</th>
+            <th class="num">Total Units</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for h in households %}
+            <tr>
+              <th><span class="code-pill">{{ h.household_id }}</span></th>
+              <td>
+                <strong>{{ h.consumer_name }}</strong>
+                <div class="muted-small">{{ h.address }}</div>
+              </td>
+              <td><span class="code-pill">{{ h.meter_number }}</span></td>
+              <td>{{ h.area }}</td>
+              <td>
+                <div>{{ h.connection_type }}</div>
+                <div class="muted-small">{{ h.meter_category }}</div>
+              </td>
+              <td class="num">{{ h.total_bills }}</td>
+              <td class="num">{{ "%.1f"|format(h.total_units) }} kWh</td>
+              <td>
+                <div class="row-actions">
+                  <a href="{{ url_for('billing_history_page', household_ref_id=h.id) }}" class="btn btn-xs btn-outline">History</a>
+                  <a href="{{ url_for('meter_reading_page', household_ref_id=h.id) }}" class="btn btn-xs btn-secondary">Reading</a>
+                  <a href="{{ url_for('edit_household_page', record_id=h.id) }}" class="btn btn-xs btn-outline">Edit</a>
+                  <button
+                    type="button"
+                    class="btn btn-xs btn-danger-outline"
+                    data-confirm-action="{{ url_for('delete_household_route', record_id=h.id) }}"
+                    data-confirm-title="Delete Household {{ h.household_id }}?"
+                    data-confirm-message="Deleting {{ h.consumer_name }} ({{ h.meter_number }}) will permanently remove all associated meter readings and electricity bills."
+                    data-confirm-label="Delete Household"
+                  >Delete</button>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <p>No households matched your search criteria.</p>
+      <a href="{{ url_for('add_household_page') }}" class="btn btn-primary">Register New Household</a>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

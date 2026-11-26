@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Electricity Billing Dashboard{% endblock %}
+{% block page_subtitle %}Real-time overview from SQLite household, meter reading, and billing records{% endblock %}
+
+{% block content %}
+<!-- Quick Action Bar -->
+<section class="action-bar no-print" aria-label="Quick actions">
+  <div class="action-bar-links">
+    <a href="{{ url_for('add_household_page') }}" class="btn btn-primary">+ Register Household</a>
+    <a href="{{ url_for('meter_reading_page') }}" class="btn btn-secondary">Enter Meter Reading</a>
+    <a href="{{ url_for('generate_bill_page') }}" class="btn btn-outline">Progressive Bill Calculator</a>
+    <a href="{{ url_for('export_reports_csv', type='all_bills') }}" class="btn btn-outline">Download CSV Report</a>
+  </div>
+  {% if missing_sample_count > 0 %}
+    <form method="POST" action="{{ url_for('load_sample_route') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-accent">Load Missing Sample Data ({{ missing_sample_count }})</button>
+    </form>
+  {% endif %}
+</section>
+
+<!-- KPI Metric Cards -->
+<section class="kpi-grid" aria-label="System billing statistics">
+  <article class="kpi-card">
+    <div class="kpi-label">Registered Households</div>
+    <div class="kpi-value">{{ stats.total_households }}</div>
+    <div class="kpi-meta">Active metered connections</div>
+  </article>
+
+  <article class="kpi-card">
+    <div class="kpi-label">Total Bills Generated</div>
+    <div class="kpi-value">{{ stats.total_bills }}</div>
+    <div class="kpi-meta">Stored in SQLite ledger</div>
+  </article>
+
+  <article class="kpi-card kpi-highlight">
+    <div class="kpi-label">Current Month Consumption</div>
+    <div class="kpi-value">{{ "%.1f"|format(stats.current_month_units) }} kWh</div>
+    <div class="kpi-meta">Month: {{ stats.current_month_label }}</div>
+  </article>
+
+  <article class="kpi-card kpi-highlight">
+    <div class="kpi-label">Current Month Charges</div>
+    <div class="kpi-value">{{ format_inr(stats.current_month_charges) }}</div>
+    <div class="kpi-meta">Month: {{ stats.current_month_label }}</div>
+  </article>
+
+  <article class="kpi-card">
+    <div class="kpi-label">Average Monthly Consumption</div>
+    <div class="kpi-value">{{ "%.1f"|format(stats.avg_monthly_consumption) }} kWh</div>
+    <div class="kpi-meta">Across all active months</div>
+  </article>
+
+  <article class="kpi-card">
+    <div class="kpi-label">Highest Consumption Month</div>
+    {% if stats.highest_month %}
+      <div class="kpi-value">{{ "%.1f"|format(stats.highest_month.units) }} kWh</div>
+      <div class="kpi-meta">{{ stats.highest_month.month_label }} ({{ format_inr(stats.highest_month.total_bill) }})</div>
+    {% else %}
+      <div class="kpi-value">—</div>
+      <div class="kpi-meta">No billing records</div>
+    {% endif %}
+  </article>
+
+  <article class="kpi-card">
+    <div class="kpi-label">Lowest Consumption Month</div>
+    {% if stats.lowest_month %}
+      <div class="kpi-value">{{ "%.1f"|format(stats.lowest_month.units) }} kWh</div>
+      <div class="kpi-meta">{{ stats.lowest_month.month_label }} ({{ format_inr(stats.lowest_month.total_bill) }})</div>
+    {% else %}
+      <div class="kpi-value">—</div>
+      <div class="kpi-meta">No billing records</div>
+    {% endif %}
+  </article>
+
+  <article class="kpi-card kpi-warning">
+    <div class="kpi-label">Total Surcharges</div>
+    <div class="kpi-value">{{ format_inr(stats.total_surcharges) }}</div>
+    <div class="kpi-meta">High-usage slab surcharges</div>
+  </article>
+
+  <article class="kpi-card kpi-success">
+    <div class="kpi-label">Total Rebates Saved</div>
+    <div class="kpi-value">{{ format_inr(stats.total_rebates) }}</div>
+    <div class="kpi-meta">Low-usage consumer rebates</div>
+  </article>
+</section>
+
+<!-- Charts Section -->
+<section class="charts-grid" aria-label="Monthly consumption and billing charts">
+  <article class="card">
+    <div class="card-header">
+      <div>
+        <h2>Monthly Consumption (kWh)</h2>
+        <p class="card-sub">Aggregated units consumed across all households</p>
+      </div>
+      <a href="{{ url_for('monthly_analysis_page') }}" class="text-link">Full Analysis →</a>
+    </div>
+    <div class="chart-box">
+      <canvas id="dashboard-units-chart" class="chart-canvas" aria-label="Monthly electricity consumption bar chart"></canvas>
+    </div>
+  </article>
+
+  <article class="card">
+    <div class="card-header">
+      <div>
+        <h2>Monthly Bill Amount (₹)</h2>
+        <p class="card-sub">Total electricity charges billed per month</p>
+      </div>
+      <a href="{{ url_for('reports_page') }}" class="text-link">View Reports →</a>
+    </div>
+    <div class="chart-box">
+      <canvas id="dashboard-bills-chart" class="chart-canvas" aria-label="Monthly bill amount line chart"></canvas>
+    </div>
+  </article>
+</section>
+
+<!-- Unusual Consumption Warnings & Recent Bills -->
+<section class="split-grid">
+  <article class="card">
+    <div class="card-header">
+      <div>
+        <h2>Consumption Warning Alerts</h2>
+        <p class="card-sub">Rule-based spikes (&gt;50% increase or high usage)</p>
+      </div>
+      <a href="{{ url_for('unusual_consumption_page') }}" class="text-link">View All ({{ stats.warning_count }}) →</a>
+    </div>
+
+    {% if warning_cards %}
+      <div class="warning-card-list">
+        {% for w in warning_cards %}
+          <div class="alert-item alert-{{ w.severity }}">
+            <div class="alert-item-top">
+              <strong>{{ w.household_id }} — {{ w.consumer_name }}</strong>
+              <span class="badge badge-{{ 'danger' if w.severity == 'critical' else 'warning' }}">{{ w.month_label }}</span>
+            </div>
+            <div class="alert-item-metrics">
+              <span>Current: <strong>{{ "%.0f"|format(w.current_consumption) }} kWh</strong></span>
+              {% if w.previous_consumption is not none %}
+                <span>Prev: {{ "%.0f"|format(w.previous_consumption) }} kWh</span>
+              {% endif %}
+              {% if w.percentage_increase is not none %}
+                <span class="delta-up">+{{ "%.1f"|format(w.percentage_increase) }}%</span>
+              {% endif %}
+            </div>
+            <p class="alert-reason">{{ w.reason_text }}</p>
+            <div class="alert-item-footer">
+              <span>Bill: {{ format_inr(w.final_payable) }}</span>
+              <a href="{{ url_for('bill_details_page', bill_id=w.bill_id) }}" class="text-link">Inspect Bill</a>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="empty-state">No unusual consumption increases detected.</p>
+    {% endif %}
+  </article>
+
+  <article class="card">
+    <div class="card-header">
+      <div>
+        <h2>Recent Billing Records</h2>
+        <p class="card-sub">Latest generated electricity bills</p>
+      </div>
+      <a href="{{ url_for('billing_history_page') }}" class="text-link">All Bills →</a>
+    </div>
+
+    {% if recent_bills %}
+      <div tabindex="0" role="region" aria-labelledby="recent-bills-caption" class="table-wrapper">
+        <table class="data-table responsive-cards-table" style="--col-1: 'Bill No.'; --col-2: 'Household'; --col-3: 'Month'; --col-4: 'Units'; --col-5: 'Final Bill'; --col-6: 'Status';">
+          <caption id="recent-bills-caption" class="visually-hidden">Recent electricity billing records</caption>
+          <thead>
+            <tr>
+              <th>Bill No.</th>
+              <th>Household</th>
+              <th>Month</th>
+              <th class="num">Units</th>
+              <th class="num">Final Bill</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for b in recent_bills %}
+              <tr>
+                <th><a href="{{ url_for('bill_details_page', bill_id=b.id) }}" class="table-link">{{ b.bill_number }}</a></th>
+                <td>{{ b.consumer_name }} <span class="muted-small">({{ b.household_id }})</span></td>
+                <td>{{ format_month_label(b.billing_month) }}</td>
+                <td class="num">{{ "%.1f"|format(b.units_consumed) }}</td>
+                <td class="num"><strong>{{ format_inr(b.final_payable) }}</strong></td>
+                <td>
+                  <span class="badge {{ 'badge-success' if b.payment_status == 'Paid' else 'badge-warning' }}">
+                    {{ b.payment_status }}
+                  </span>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="empty-state">No bills generated yet. Enter a meter reading to create your first bill.</p>
+    {% endif %}
+  </article>
+</section>
+
+<script id="dashboard-chart-data" type="application/json">{{ chart_payload | tojson }}</script>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const raw = document.getElementById("dashboard-chart-data");
+    if (!raw || !window.VoltGridCharts) return;
+    const data = JSON.parse(raw.textContent);
+    window.VoltGridCharts.drawBarChart("dashboard-units-chart", data.labels, data.units, {
+      unitSuffix: " kWh",
+      barColor: "#1d6fe8",
+      highlightColor: "#0b192c"
+    });
+    window.VoltGridCharts.drawLineChart("dashboard-bills-chart", data.labels, data.bills, {
+      prefix: "₹",
+      lineColor: "#0ea5e9",
+      fillColor: "rgba(29, 111, 232, 0.14)"
+    });
+  });
+</script>
+{% endblock %}

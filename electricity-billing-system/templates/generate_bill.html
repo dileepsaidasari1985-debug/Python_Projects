@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+{% block title %}Generate Bill{% endblock %}
+{% block page_title %}Progressive Bill Generation{% endblock %}
+{% block page_subtitle %}Review Python slab-by-slab calculations, fixed charges, duty, surcharge, and rebates before saving{% endblock %}
+
+{% block content %}
+{% if errors %}
+  <div class="error-summary" role="alert">
+    <strong>Unable to generate bill:</strong>
+    <ul>
+      {% for err in errors %}
+        <li>{{ err }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+{% endif %}
+
+{% if preview_data and selected_household and pending %}
+  <div class="split-grid">
+    <!-- Slab-by-Slab Breakdown -->
+    <section class="card">
+      <div class="card-header">
+        <div>
+          <h2>Progressive Slab Breakdown</h2>
+          <p class="card-sub">
+            Consumer: <strong>{{ selected_household.consumer_name }}</strong> ({{ selected_household.household_id }}) •
+            Month: <strong>{{ format_month_label(pending.billing_month) }}</strong>
+          </p>
+        </div>
+        <span class="badge badge-info">{{ "%.2f"|format(preview_data.units_consumed) }} kWh Consumed</span>
+      </div>
+
+      <div class="reading-summary-strip">
+        <div><span>Previous Reading</span><strong>{{ "%.2f"|format(pending.previous_reading) }}</strong></div>
+        <div><span>Current Reading</span><strong>{{ "%.2f"|format(pending.current_reading) }}</strong></div>
+        <div><span>Units Consumed</span><strong>{{ "%.2f"|format(preview_data.units_consumed) }} kWh</strong></div>
+      </div>
+
+      <div tabindex="0" role="region" aria-labelledby="preview-slab-caption" class="table-wrapper">
+        <table class="data-table">
+          <caption id="preview-slab-caption" class="visually-hidden">Progressive electricity slab calculation breakdown</caption>
+          <thead>
+            <tr>
+              <th>Slab Range</th>
+              <th class="num">Units in Slab</th>
+              <th class="num">Rate / Unit</th>
+              <th class="num">Slab Charge</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in preview_data.slab_breakdown %}
+              <tr class="{% if item.units > 0 %}row-active{% else %}row-muted{% endif %}">
+                <td>{{ item.label }}</td>
+                <td class="num">{{ "%.2f"|format(item.units) }}</td>
+                <td class="num">{{ format_inr(item.rate) }}</td>
+                <td class="num"><strong>{{ format_inr(item.charge) }}</strong></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr>
+              <th colspan="3">Total Progressive Energy Charge</th>
+              <th class="num">{{ format_inr(preview_data.energy_charge) }}</th>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </section>
+
+    <!-- Final Payable Confirmation -->
+    <section class="card">
+      <div class="card-header">
+        <div>
+          <h2>Final Payable Calculation</h2>
+          <p class="card-sub">Every billing component calculated transparently in Python</p>
+        </div>
+      </div>
+
+      <dl class="charge-breakdown-list">
+        <div class="charge-row">
+          <dt>Energy Charge (Slab Total)</dt>
+          <dd>{{ format_inr(preview_data.energy_charge) }}</dd>
+        </div>
+        <div class="charge-row">
+          <dt>(+) Fixed Monthly Charge</dt>
+          <dd>{{ format_inr(preview_data.fixed_charge) }}</dd>
+        </div>
+        <div class="charge-row">
+          <dt>(+) Electricity Duty ({{ rules.duty_percent }}%)</dt>
+          <dd>{{ format_inr(preview_data.electricity_duty) }}</dd>
+        </div>
+        <div class="charge-row {% if preview_data.surcharge_amount > 0 %}text-warning{% endif %}">
+          <dt>(+) Surcharge ({{ rules.surcharge_percent }}% if &gt; {{ "%.0f"|format(rules.surcharge_threshold_units) }} units)</dt>
+          <dd>{{ format_inr(preview_data.surcharge_amount) }}</dd>
+        </div>
+        <div class="charge-row {% if preview_data.rebate_amount > 0 %}text-success{% endif %}">
+          <dt>(-) Rebate</dt>
+          <dd>- {{ format_inr(preview_data.rebate_amount) }}</dd>
+        </div>
+        <div class="charge-row {% if preview_data.late_penalty_amount > 0 %}text-danger{% endif %}">
+          <dt>(+) Late Payment Penalty</dt>
+          <dd>{{ format_inr(preview_data.late_penalty_amount) }}</dd>
+        </div>
+        <div class="charge-row charge-total">
+          <dt>Final Payable Amount</dt>
+          <dd>{{ format_inr(preview_data.final_payable) }}</dd>
+        </div>
+      </dl>
+
+      <form method="POST" action="{{ url_for('generate_bill_page') }}" class="structured-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="confirm">
+        <input type="hidden" name="household_ref_id" value="{{ pending.household_ref_id }}">
+        <input type="hidden" name="billing_month" value="{{ pending.billing_month }}">
+        <input type="hidden" name="previous_reading" value="{{ pending.previous_reading }}">
+        <input type="hidden" name="current_reading" value="{{ pending.current_reading }}">
+        <input type="hidden" name="billing_date" value="{{ pending.billing_date }}">
+        {% if pending.is_late_payment %}
+          <input type="hidden" name="is_late_payment" value="1">
+        {% endif %}
+
+        <fieldset class="radio-fieldset">
+          <legend>Initial Payment Status</legend>
+          <div class="radio-group">
+            <label class="radio-pill">
+              <input type="radio" name="payment_status" value="Unpaid" checked>
+              <span>Unpaid</span>
+            </label>
+            <label class="radio-pill">
+              <input type="radio" name="payment_status" value="Paid">
+              <span>Paid</span>
+            </label>
+          </div>
+        </fieldset>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Confirm &amp; Generate Official Bill</button>
+          <a href="{{ url_for('meter_reading_page', household_ref_id=pending.household_ref_id) }}" class="btn btn-outline">Edit Reading</a>
+        </div>
+      </form>
+    </section>
+  </div>
+{% else %}
+  <section class="card form-card">
+    <div class="card-header">
+      <div>
+        <h2>Calculate &amp; Generate Monthly Bill</h2>
+        <p class="card-sub">Select a household and meter readings to preview the progressive slab breakdown before generating a bill.</p>
+      </div>
+    </div>
+
+    {% if not households %}
+      <div class="empty-state">
+        <p>No households registered yet.</p>
+        <a href="{{ url_for('add_household_page') }}" class="btn btn-primary">+ Register Household</a>
+      </div>
+    {% else %}
+      <form method="POST" action="{{ url_for('generate_bill_page') }}" class="structured-form" data-validate-form>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="preview">
+
+        <div class="field">
+          <label for="gen_household_ref_id">Household <span aria-hidden="true">*</span></label>
+          <select id="gen_household_ref_id" name="household_ref_id" required>
+            <option value="">-- Choose Household --</option>
+            {% for h in households %}
+              <option value="{{ h.id }}">{{ h.household_id }} — {{ h.consumer_name }} ({{ h.meter_number }})</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="field">
+            <label for="gen_billing_month">Billing Month <span aria-hidden="true">*</span></label>
+            <input type="month" id="gen_billing_month" name="billing_month" value="{{ default_month }}" required>
+          </div>
+          <div class="field">
+            <label for="gen_billing_date">Billing Date <span aria-hidden="true">*</span></label>
+            <input type="date" id="gen_billing_date" name="billing_date" value="{{ default_date }}" required>
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="field">
+            <label for="gen_previous_reading">Previous Reading (kWh) <span aria-hidden="true">*</span></label>
+            <input type="number" id="gen_previous_reading" name="previous_reading" min="0" step="0.01" required>
+          </div>
+          <div class="field">
+            <label for="gen_current_reading">Current Reading (kWh) <span aria-hidden="true">*</span></label>
+            <input type="number" id="gen_current_reading" name="current_reading" min="0" step="0.01" required>
+          </div>
+        </div>
+
+        <div class="checkbox-row">
+          <input type="checkbox" id="gen_late" name="is_late_payment" value="1">
+          <label for="gen_late">Apply Late Payment Penalty ({{ format_inr(rules.late_payment_penalty) }})</label>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Calculate Progressive Slabs →</button>
+          <a href="{{ url_for('meter_reading_page') }}" class="btn btn-outline">Go to Meter Reading Page</a>
+        </div>
+      </form>
+      <script id="gen-latest-readings-json" type="application/json">{{ latest_readings | tojson }}</script>
+      <script>
+        document.addEventListener("DOMContentLoaded", () => {
+          const mapEl = document.getElementById("gen-latest-readings-json");
+          const hhSelect = document.getElementById("gen_household_ref_id");
+          const prevInput = document.getElementById("gen_previous_reading");
+          if (!mapEl || !hhSelect || !prevInput) return;
+          const map = JSON.parse(mapEl.textContent);
+          hhSelect.addEventListener("change", () => {
+            if (hhSelect.value && Object.prototype.hasOwnProperty.call(map, hhSelect.value)) {
+              prevInput.value = map[hhSelect.value];
+            }
+          });
+        });
+      </script>
+    {% endif %}
+  </section>
+{% endif %}
+{% endblock %}

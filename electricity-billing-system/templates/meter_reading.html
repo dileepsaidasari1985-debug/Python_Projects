@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% block title %}Meter Reading{% endblock %}
+{% block page_title %}Electricity Meter Reading{% endblock %}
+{% block page_subtitle %}Enter monthly meter readings, calculate consumed units, and preview progressive charges{% endblock %}
+
+{% block content %}
+<div class="split-grid">
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <h2>Meter Reading Entry</h2>
+        <p class="card-sub">Current reading must be greater than or equal to previous reading. Duplicate billing months are prevented.</p>
+      </div>
+    </div>
+
+    {% if errors %}
+      <div class="error-summary" role="alert">
+        <strong>Validation failed:</strong>
+        <ul>
+          {% for err in errors %}
+            <li>{{ err }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    {% if not households %}
+      <div class="empty-state">
+        <p>Please register at least one household before recording meter readings.</p>
+        <a href="{{ url_for('add_household_page') }}" class="btn btn-primary">+ Register Household</a>
+      </div>
+    {% else %}
+      <form method="POST" action="{{ url_for('meter_reading_page') }}" class="structured-form" id="meter-reading-form" data-validate-form>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="field">
+          <label for="household_ref_id">Select Household <span aria-hidden="true">*</span></label>
+          <select id="household_ref_id" name="household_ref_id" required>
+            <option value="">-- Choose a Registered Household --</option>
+            {% for h in households %}
+              <option value="{{ h.id }}" {% if form_values.household_ref_id|string == h.id|string %}selected{% endif %}>
+                {{ h.household_id }} — {{ h.consumer_name }} ({{ h.meter_number }})
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="field">
+            <label for="billing_month">Billing Month <span aria-hidden="true">*</span></label>
+            <input type="month" id="billing_month" name="billing_month" value="{{ form_values.billing_month }}" required aria-describedby="month-hint">
+            <span id="month-hint" class="hint">Format: YYYY-MM (one bill per household per month).</span>
+          </div>
+
+          <div class="field">
+            <label for="billing_date">Billing Date <span aria-hidden="true">*</span></label>
+            <input type="date" id="billing_date" name="billing_date" value="{{ form_values.billing_date }}" required>
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="field">
+            <label for="previous_reading">Previous Meter Reading (kWh) <span aria-hidden="true">*</span></label>
+            <input type="number" id="previous_reading" name="previous_reading" value="{{ form_values.previous_reading }}" min="0" step="0.01" required aria-describedby="prev-hint">
+            <span id="prev-hint" class="hint">Auto-filled from last recorded reading when available.</span>
+          </div>
+
+          <div class="field">
+            <label for="current_reading">Current Meter Reading (kWh) <span aria-hidden="true">*</span></label>
+            <input type="number" id="current_reading" name="current_reading" value="{{ form_values.current_reading }}" min="0" step="0.01" required aria-describedby="curr-hint">
+            <span id="curr-hint" class="hint">Must be &ge; previous meter reading.</span>
+          </div>
+        </div>
+
+        <div class="checkbox-row">
+          <input type="checkbox" id="is_late_payment" name="is_late_payment" value="1" {% if form_values.is_late_payment %}checked{% endif %}>
+          <label for="is_late_payment">Apply Late Payment Penalty ({{ format_inr(rules.late_payment_penalty) }})</label>
+        </div>
+
+        <div class="live-units-banner" id="live-units-banner" aria-live="polite">
+          <div>
+            <span class="banner-label">Calculated Consumption</span>
+            <strong class="banner-value" id="live-units-value">0.00 kWh</strong>
+          </div>
+          <div id="live-units-status" class="banner-note">Enter both readings to compute units before generating the bill.</div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Calculate Units &amp; Preview Bill →</button>
+          <a href="{{ url_for('dashboard') }}" class="btn btn-outline">Cancel</a>
+        </div>
+      </form>
+    {% endif %}
+  </section>
+
+  <!-- Active Progressive Slabs & Rules Reference Card -->
+  <aside class="card">
+    <div class="card-header">
+      <div>
+        <h2>Active Progressive Slab Tariff</h2>
+        <p class="card-sub">Current academic tariff structure applied by Python engine</p>
+      </div>
+      <a href="{{ url_for('tariff_rules_page') }}" class="text-link">Edit Rules</a>
+    </div>
+
+    <div tabindex="0" role="region" aria-labelledby="active-slabs-caption" class="table-wrapper">
+      <table class="data-table">
+        <caption id="active-slabs-caption" class="visually-hidden">Active progressive electricity tariff slabs</caption>
+        <thead>
+          <tr>
+            <th>Consumption Range</th>
+            <th class="num">Rate / Unit</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for low, high, rate, label in slabs %}
+            <tr>
+              <td>{{ label }}</td>
+              <td class="num"><strong>{{ format_inr(rate) }}</strong></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="rule-summary-box">
+      <h3>Configured Billing Rules</h3>
+      <ul>
+        <li><span>Fixed Monthly Charge:</span> <strong>{{ format_inr(rules.fixed_charge) }}</strong></li>
+        <li><span>Electricity Duty:</span> <strong>{{ rules.duty_percent }}% of Energy Charge</strong></li>
+        <li><span>Surcharge:</span> <strong>{{ rules.surcharge_percent }}% (above {{ "%.0f"|format(rules.surcharge_threshold_units) }} units)</strong></li>
+        <li>
+          <span>Rebate:</span>
+          <strong>
+            {% if rules.rebate_mode == 'percent' %}{{ rules.rebate_value }}%{% else %}{{ format_inr(rules.rebate_value) }}{% endif %}
+            (up to {{ "%.0f"|format(rules.rebate_threshold_units) }} units)
+          </strong>
+        </li>
+        <li><span>Late Payment Penalty:</span> <strong>{{ format_inr(rules.late_payment_penalty) }}</strong></li>
+      </ul>
+    </div>
+  </aside>
+</div>
+
+<script id="latest-readings-json" type="application/json">{{ latest_readings | tojson }}</script>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const mapEl = document.getElementById("latest-readings-json");
+    const hhSelect = document.getElementById("household_ref_id");
+    const prevInput = document.getElementById("previous_reading");
+    const currInput = document.getElementById("current_reading");
+    const valEl = document.getElementById("live-units-value");
+    const statusEl = document.getElementById("live-units-status");
+    const bannerEl = document.getElementById("live-units-banner");
+    if (!mapEl || !hhSelect || !prevInput || !currInput) return;
+
+    const latestReadings = JSON.parse(mapEl.textContent);
+
+    function updateConsumptionPreview() {
+      const p = parseFloat(prevInput.value);
+      const c = parseFloat(currInput.value);
+      bannerEl.classList.remove("is-error", "is-valid");
+      currInput.setCustomValidity("");
+
+      if (Number.isNaN(p) || Number.isNaN(c)) {
+        valEl.textContent = "— kWh";
+        statusEl.textContent = "Enter both readings to compute units.";
+        return;
+      }
+      if (p < 0 || c < 0) {
+        valEl.textContent = "Invalid";
+        statusEl.textContent = "Readings cannot be negative.";
+        bannerEl.classList.add("is-error");
+        return;
+      }
+      if (c < p) {
+        valEl.textContent = "Invalid";
+        statusEl.textContent = "Current reading cannot be less than previous reading.";
+        currInput.setCustomValidity("Current reading cannot be less than previous reading.");
+        bannerEl.classList.add("is-error");
+        return;
+      }
+      const units = (c - p).toFixed(2);
+      valEl.textContent = `${units} kWh`;
+      statusEl.textContent = `Formula: ${c.toFixed(2)} - ${p.toFixed(2)} = ${units} units ready for progressive slab calculation.`;
+      bannerEl.classList.add("is-valid");
+    }
+
+    hhSelect.addEventListener("change", () => {
+      const selected = hhSelect.value;
+      if (selected && Object.prototype.hasOwnProperty.call(latestReadings, selected)) {
+        prevInput.value = latestReadings[selected];
+      }
+      updateConsumptionPreview();
+    });
+
+    prevInput.addEventListener("input", updateConsumptionPreview);
+    currInput.addEventListener("input", updateConsumptionPreview);
+    updateConsumptionPreview();
+  });
+</script>
+{% endblock %}

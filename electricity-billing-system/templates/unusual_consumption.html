@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}Unusual Consumption Detection{% endblock %}
+{% block page_title %}Unusual Consumption Detection{% endblock %}
+{% block page_subtitle %}Rule-based anomaly detection comparing month-over-month jumps, 3-month averages, and usage thresholds{% endblock %}
+
+{% block content %}
+<section class="card">
+  <div class="card-header">
+    <div>
+      <h2>Active Rule-Based Detection Criteria</h2>
+      <p class="card-sub">Pure Python conditional checks (no machine learning) inspecting {{ total_bills_checked }} billing records</p>
+    </div>
+    <div class="header-actions">
+      <a href="{{ url_for('tariff_rules_page') }}" class="btn btn-outline btn-sm">Adjust Thresholds</a>
+      <a href="{{ url_for('export_reports_csv', type='unusual') }}" class="btn btn-secondary btn-sm">Export Warnings CSV</a>
+    </div>
+  </div>
+
+  <div class="rules-pill-row">
+    <span class="rule-chip">MoM Increase &gt; <strong>{{ rules.unusual_increase_percent }}%</strong></span>
+    <span class="rule-chip">3-Month Average Spike &gt; <strong>{{ rules.unusual_increase_percent }}%</strong></span>
+    <span class="rule-chip">High Usage Threshold &gt; <strong>{{ "%.0f"|format(rules.high_consumption_threshold) }} kWh</strong></span>
+    <span class="rule-chip">High Bill Threshold &gt; <strong>{{ format_inr(rules.high_bill_threshold) }}</strong></span>
+  </div>
+</section>
+
+{% if warnings %}
+  <section class="warning-grid" aria-label="Detected consumption warnings">
+    {% for w in warnings %}
+      <article class="card alert-card alert-{{ w.severity }}">
+        <div class="alert-item-top">
+          <div>
+            <h3>{{ w.household_id }} — {{ w.consumer_name }}</h3>
+            <span class="muted-small">Meter: {{ w.meter_number }} • {{ w.bill_number }}</span>
+          </div>
+          <span class="badge {{ 'badge-danger' if w.severity == 'critical' else 'badge-warning' }}">{{ w.month_label }}</span>
+        </div>
+
+        <div class="alert-metrics-grid">
+          <div>
+            <span class="metric-lbl">Previous</span>
+            <strong>{% if w.previous_consumption is not none %}{{ "%.1f"|format(w.previous_consumption) }} kWh{% else %}—{% endif %}</strong>
+          </div>
+          <div>
+            <span class="metric-lbl">Current</span>
+            <strong>{{ "%.1f"|format(w.current_consumption) }} kWh</strong>
+          </div>
+          <div>
+            <span class="metric-lbl">Difference</span>
+            <strong>{% if w.difference_units is not none %}+{{ "%.1f"|format(w.difference_units) }} kWh{% else %}—{% endif %}</strong>
+          </div>
+          <div>
+            <span class="metric-lbl">% Increase</span>
+            <strong class="delta-up">{% if w.percentage_increase is not none %}+{{ "%.1f"|format(w.percentage_increase) }}%{% else %}N/A{% endif %}</strong>
+          </div>
+        </div>
+
+        {% if w.three_month_avg is not none %}
+          <p class="muted-small">Previous 3-month average: <strong>{{ "%.1f"|format(w.three_month_avg) }} kWh</strong></p>
+        {% endif %}
+
+        <div class="reason-banner">
+          <strong>Warning Reason:</strong> {{ w.reason_text }}
+        </div>
+
+        <div class="alert-item-footer">
+          <span>Final Bill: <strong>{{ format_inr(w.final_payable) }}</strong></span>
+          <a href="{{ url_for('bill_details_page', bill_id=w.bill_id) }}" class="btn btn-xs btn-outline">View Bill Details</a>
+        </div>
+      </article>
+    {% endfor %}
+  </section>
+
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <h2>Flagged Consumption Ledger ({{ warnings|length }})</h2>
+        <p class="card-sub">Complete comparison table for audit and consumer follow-up</p>
+      </div>
+    </div>
+    <div tabindex="0" role="region" aria-labelledby="unusual-table-caption" class="table-wrapper">
+      <table class="data-table responsive-cards-table" style="--col-1: 'Household'; --col-2: 'Month'; --col-3: 'Previous'; --col-4: '3-Mo Avg'; --col-5: 'Current'; --col-6: 'Diff'; --col-7: '% Increase'; --col-8: 'Reason';">
+        <caption id="unusual-table-caption" class="visually-hidden">Flagged unusual electricity consumption records</caption>
+        <thead>
+          <tr>
+            <th>Household</th>
+            <th>Month</th>
+            <th class="num">Prev Units</th>
+            <th class="num">3-Mo Avg</th>
+            <th class="num">Current Units</th>
+            <th class="num">Difference</th>
+            <th class="num">% Increase</th>
+            <th>Reason for Warning</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for w in warnings %}
+            <tr>
+              <th>
+                <a href="{{ url_for('bill_details_page', bill_id=w.bill_id) }}" class="table-link">{{ w.household_id }}</a>
+                <div class="muted-small">{{ w.consumer_name }}</div>
+              </th>
+              <td>{{ w.month_label }}</td>
+              <td class="num">{% if w.previous_consumption is not none %}{{ "%.1f"|format(w.previous_consumption) }}{% else %}—{% endif %}</td>
+              <td class="num">{% if w.three_month_avg is not none %}{{ "%.1f"|format(w.three_month_avg) }}{% else %}—{% endif %}</td>
+              <td class="num"><strong>{{ "%.1f"|format(w.current_consumption) }}</strong></td>
+              <td class="num">{% if w.difference_units is not none %}+{{ "%.1f"|format(w.difference_units) }}{% else %}—{% endif %}</td>
+              <td class="num">
+                {% if w.percentage_increase is not none %}
+                  <span class="delta-up">+{{ "%.1f"|format(w.percentage_increase) }}%</span>
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+              <td>{{ w.reason_text }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% else %}
+  <section class="card">
+    <p class="empty-state">No unusual consumption increases or threshold breaches were detected under the current rules.</p>
+  </section>
+{% endif %}
+{% endblock %}

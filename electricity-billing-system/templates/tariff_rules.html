@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block title %}Tariff & Billing Rules{% endblock %}
+{% block page_title %}Tariff Slabs &amp; Billing Rules{% endblock %}
+{% block page_subtitle %}Configure progressive electricity slabs, fixed charges, duty, surcharge, rebate, and warning thresholds{% endblock %}
+
+{% block content %}
+<section class="card">
+  <div class="card-header">
+    <div>
+      <h2>Utility Billing Configuration</h2>
+      <p class="card-sub">Academic example tariff values stored in SQLite. New bills automatically apply updated rules.</p>
+    </div>
+    <button
+      type="button"
+      class="btn btn-outline"
+      data-confirm-action="{{ url_for('reset_tariff_rules_route') }}"
+      data-confirm-title="Reset Tariff Rules to Academic Defaults?"
+      data-confirm-message="This will restore the default 5 progressive slabs (₹2 to ₹8/unit), ₹50 fixed charge, 5% duty, 10% surcharge, 5% rebate, and 50% unusual threshold."
+      data-confirm-label="Reset Defaults"
+    >Reset to Defaults</button>
+  </div>
+
+  {% if errors %}
+    <div class="error-summary" role="alert">
+      <strong>Please fix the configuration errors below:</strong>
+      <ul>
+        {% for err in errors %}
+          <li>{{ err }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  <form method="POST" action="{{ url_for('tariff_rules_page') }}" class="structured-form" data-validate-form>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="field">
+      <label for="company_name">Electricity Utility Company Name <span aria-hidden="true">*</span></label>
+      <input type="text" id="company_name" name="company_name" value="{{ rules.company_name }}" required minlength="3" maxlength="100">
+    </div>
+
+    <h3 class="section-heading">Progressive Consumption Slabs</h3>
+    <div tabindex="0" role="region" aria-labelledby="edit-slabs-caption" class="table-wrapper">
+      <table class="data-table">
+        <caption id="edit-slabs-caption" class="visually-hidden">Editable progressive tariff slabs</caption>
+        <thead>
+          <tr>
+            <th>Slab #</th>
+            <th>Min Units</th>
+            <th>Max Units (blank for last)</th>
+            <th>Rate per Unit (₹)</th>
+            <th>Display Label</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for low, high, rate, label in slabs %}
+            {% set idx = loop.index %}
+            <tr>
+              <th>Slab {{ idx }}</th>
+              <td>
+                <input type="number" name="slab_min_{{ idx }}" value="{{ low }}" min="0" step="1" required aria-label="Slab {{ idx }} minimum units">
+              </td>
+              <td>
+                <input type="number" name="slab_max_{{ idx }}" value="{{ high if high is not none else '' }}" min="0" step="1" {% if idx < 5 %}required{% endif %} placeholder="{% if idx == 5 %}Open-ended{% endif %}" aria-label="Slab {{ idx }} maximum units">
+              </td>
+              <td>
+                <input type="number" name="slab_rate_{{ idx }}" value="{{ rate }}" min="0" step="0.01" required aria-label="Slab {{ idx }} rate per unit">
+              </td>
+              <td>
+                <input type="text" name="slab_label_{{ idx }}" value="{{ label }}" required aria-label="Slab {{ idx }} label">
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="section-heading">Fixed Charges, Duty, Surcharges &amp; Rebates</h3>
+    <div class="form-grid-3">
+      <div class="field">
+        <label for="fixed_charge">Fixed Monthly Charge (₹)</label>
+        <input type="number" id="fixed_charge" name="fixed_charge" value="{{ rules.fixed_charge }}" min="0" step="0.01" required>
+      </div>
+      <div class="field">
+        <label for="duty_percent">Electricity Duty (%)</label>
+        <input type="number" id="duty_percent" name="duty_percent" value="{{ rules.duty_percent }}" min="0" max="100" step="0.01" required>
+      </div>
+      <div class="field">
+        <label for="late_payment_penalty">Late Payment Penalty (₹)</label>
+        <input type="number" id="late_payment_penalty" name="late_payment_penalty" value="{{ rules.late_payment_penalty }}" min="0" step="0.01" required>
+      </div>
+    </div>
+
+    <div class="form-grid-2">
+      <div class="field">
+        <label for="surcharge_percent">Surcharge Percentage (%)</label>
+        <input type="number" id="surcharge_percent" name="surcharge_percent" value="{{ rules.surcharge_percent }}" min="0" max="100" step="0.01" required>
+      </div>
+      <div class="field">
+        <label for="surcharge_threshold_units">Apply Surcharge Above (units, 0 = all)</label>
+        <input type="number" id="surcharge_threshold_units" name="surcharge_threshold_units" value="{{ rules.surcharge_threshold_units }}" min="0" step="1" required>
+      </div>
+    </div>
+
+    <div class="form-grid-3">
+      <div class="field">
+        <label for="rebate_mode">Rebate Calculation Mode</label>
+        <select id="rebate_mode" name="rebate_mode">
+          <option value="percent" {% if rules.rebate_mode == 'percent' %}selected{% endif %}>Percentage (%) of Energy Charge</option>
+          <option value="fixed" {% if rules.rebate_mode == 'fixed' %}selected{% endif %}>Fixed Amount (₹)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="rebate_value">Rebate Value (% or ₹)</label>
+        <input type="number" id="rebate_value" name="rebate_value" value="{{ rules.rebate_value }}" min="0" step="0.01" required>
+      </div>
+      <div class="field">
+        <label for="rebate_threshold_units">Apply Rebate Up To (units, 0 = all)</label>
+        <input type="number" id="rebate_threshold_units" name="rebate_threshold_units" value="{{ rules.rebate_threshold_units }}" min="0" step="1" required>
+      </div>
+    </div>
+
+    <h3 class="section-heading">Unusual Consumption Detection Thresholds</h3>
+    <div class="form-grid-3">
+      <div class="field">
+        <label for="unusual_increase_percent">Unusual Increase Threshold (%)</label>
+        <input type="number" id="unusual_increase_percent" name="unusual_increase_percent" value="{{ rules.unusual_increase_percent }}" min="5" max="500" step="0.5" required>
+      </div>
+      <div class="field">
+        <label for="high_consumption_threshold">High Consumption Limit (kWh)</label>
+        <input type="number" id="high_consumption_threshold" name="high_consumption_threshold" value="{{ rules.high_consumption_threshold }}" min="10" step="1" required>
+      </div>
+      <div class="field">
+        <label for="high_bill_threshold">High Electricity Bill Limit (₹)</label>
+        <input type="number" id="high_bill_threshold" name="high_bill_threshold" value="{{ rules.high_bill_threshold }}" min="50" step="1" required>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Save Tariff &amp; Billing Rules</button>
+    </div>
+  </form>
+</section>
+{% endblock %}
