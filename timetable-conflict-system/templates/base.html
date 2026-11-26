@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Timetable Conflict Detection{% endblock %} | Case Study #23</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <div class="app-shell">
+    <div class="Drawer" id="drawer" popover="manual" role="dialog" aria-label="Primary navigation">
+      <div class="Drawer-scroller">
+        <aside class="Drawer-sheet sidebar" aria-label="Timetable Navigation">
+          <div class="sidebar-header">
+            <a href="{{ url_for('dashboard') }}" class="brand">
+              <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="" width="38" height="38">
+              <div>
+                <span class="brand-title">TimeSync Guard</span>
+                <span class="brand-sub">Case Study #23</span>
+              </div>
+            </a>
+            <button type="button" id="drawer-close" class="drawer-close-btn" aria-label="Close navigation menu" autofocus>✕</button>
+          </div>
+
+          <div class="status-chip">
+            <span class="chip-badge">CAMPUS REGISTRY</span>
+            <strong>{{ nav_course_count }} Courses Indexed</strong>
+            <span class="small">{{ nav_room_count }} Rooms ({{ nav_unavail_count }} Blocked)</span>
+          </div>
+
+          <nav class="sidebar-nav" aria-label="Main sections">
+            <p class="nav-group-label">Overview</p>
+            <a href="{{ url_for('dashboard') }}" class="nav-link {% if current_endpoint == 'dashboard' %}is-active{% endif %}">Dashboard</a>
+            <a href="{{ url_for('validator') }}" class="nav-link {% if current_endpoint == 'validator' %}is-active{% endif %}">Timetable Validator</a>
+            <p class="nav-group-label">Catalog &amp; Facilities</p>
+            <a href="{{ url_for('courses') }}" class="nav-link {% if current_endpoint == 'courses' %}is-active{% endif %}">Course Schedules</a>
+            <a href="{{ url_for('rooms') }}" class="nav-link {% if current_endpoint == 'rooms' %}is-active{% endif %}">Room Availability</a>
+            <p class="nav-group-label">Audit &amp; Reports</p>
+            <a href="{{ url_for('proposals') }}" class="nav-link {% if current_endpoint in ('proposals', 'proposal_detail') %}is-active{% endif %}">Saved Proposals</a>
+            <a href="{{ url_for('reports') }}" class="nav-link {% if current_endpoint == 'reports' %}is-active{% endif %}">Reports &amp; ASCII Grid</a>
+          </nav>
+
+          <div class="sidebar-footer">
+            Python Activity-Based Learning<br>Strings, Tuples &amp; Interval Detection
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <div class="main-shell" id="main-shell">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button type="button" id="drawer-open" class="menu-toggle-btn" aria-label="Open navigation menu" aria-expanded="false" aria-controls="drawer">☰</button>
+          <div>
+            <h1 class="page-heading">{% block page_title %}Timetable Conflict Dashboard{% endblock %}</h1>
+            <p class="page-subtitle">{% block page_subtitle %}Compare course schedules, detect overlapping periods &amp; unavailable rooms{% endblock %}</p>
+          </div>
+        </div>
+        <div class="topbar-right">
+          <a href="{{ url_for('validator') }}" class="btn btn-primary btn-sm">Validate Timetable</a>
+          <a href="{{ url_for('export_csv') }}" class="btn btn-outline btn-sm">Export CSV</a>
+        </div>
+      </header>
+
+      <main class="content-area" id="main-content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class="flash-stack" role="status" aria-live="polite">
+              {% for cat, msg in messages %}
+                <div class="alert alert-{{ cat }}">
+                  <span class="alert-tag">{{ cat | upper }}</span>
+                  <span>{{ msg }}</span>
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+
+  <dialog id="confirm-dialog" closedby="closerequest" aria-labelledby="confirm-dialog-title">
+    <h1 id="confirm-dialog-title" style="margin-top:0;font-size:1.15rem;">Confirm Action</h1>
+    <p id="confirm-dialog-msg" class="muted">Are you sure?</p>
+    <form method="dialog" class="dialog-actions">
+      <button value="cancel" class="btn btn-outline" autofocus>Cancel</button>
+      <button value="confirm" class="btn btn-danger">Confirm</button>
+    </form>
+  </dialog>
+
+  <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Saved Proposals{% endblock %}
+{% block page_title %}Saved Student Timetable Proposals{% endblock %}
+{% block page_subtitle %}Historical proposed timetables and conflict audit summaries{% endblock %}
+
+{% block content %}
+<section class="card">
+  <div class="card-header">
+    <h3>All Proposals ({{ proposals | length }})</h3>
+    <a href="{{ url_for('validator') }}" class="btn btn-primary btn-sm">New Proposal</a>
+  </div>
+  <div tabindex="0" role="region" aria-label="Saved proposals" class="table-wrapper">
+    <table class="responsive-stack">
+      <thead>
+        <tr><th>Proposal ID</th><th>Student</th><th>Semester</th><th>Courses</th><th>Status</th><th>Summary</th></tr>
+      </thead>
+      <tbody>
+        {% for p in proposals %}
+        <tr>
+          <th><a href="{{ url_for('proposal_detail', proposal_id=p.proposal_id) }}">{{ p.proposal_id }}</a></th>
+          <td>{{ p.student_name }}<br><span class="small mono muted">{{ p.student_id }}</span></td>
+          <td>{{ p.semester }}</td>
+          <td class="mono small">{{ p.course_codes_csv }}</td>
+          <td>
+            {% if p.is_valid %}
+              <span class="badge badge-green">Valid</span>
+            {% else %}
+              <span class="badge badge-red">{{ p.conflict_count }} Conflict(s)</span>
+            {% endif %}
+          </td>
+          <td class="small">{{ p.summary_text }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

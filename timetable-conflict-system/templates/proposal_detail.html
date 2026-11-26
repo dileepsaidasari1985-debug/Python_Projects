@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}{{ proposal.proposal_id }}{% endblock %}
+{% block page_title %}Proposal {{ proposal.proposal_id }}{% endblock %}
+{% block page_subtitle %}{{ proposal.student_name }} ({{ proposal.student_id }}) &bull; {{ proposal.semester }}{% endblock %}
+
+{% block content %}
+<section class="card">
+  <div class="card-header">
+    <h3>Timetable Audit</h3>
+    <div class="no-print" style="display:flex;gap:0.5rem;">
+      <button type="button" class="btn btn-outline btn-sm" onclick="window.print()">Print Report</button>
+      <a href="{{ url_for('proposals') }}" class="btn btn-outline btn-sm">Back to Proposals</a>
+    </div>
+  </div>
+  <p>{{ proposal.summary_text }}</p>
+  <pre class="ascii-box">{{ report.ascii_pattern }}</pre>
+</section>
+{% endblock %}

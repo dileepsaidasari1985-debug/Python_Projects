@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Room Availability{% endblock %}
+{% block page_title %}Campus Room Availability &amp; Blocks{% endblock %}
+{% block page_subtitle %}Manage available, maintenance, and reserved classroom time windows{% endblock %}
+
+{% block content %}
+<section class="card">
+  <div class="card-header"><h3>Room Registry ({{ rooms | length }})</h3></div>
+  <div tabindex="0" role="region" aria-label="Room availability table" class="table-wrapper">
+    <table class="responsive-stack">
+      <thead>
+        <tr><th>Room</th><th>Building</th><th>Capacity</th><th>Status</th><th>Blocked Window</th><th>Update Availability</th></tr>
+      </thead>
+      <tbody>
+        {% for r in rooms %}
+        <tr>
+          <th class="mono">{{ r.room_code }}</th>
+          <td>{{ r.building }}</td>
+          <td>{{ r.capacity }} seats</td>
+          <td>
+            {% if r.status == 'Available' %}
+              <span class="badge badge-green">Available</span>
+            {% elif r.status == 'Maintenance' %}
+              <span class="badge badge-red">Maintenance</span>
+            {% else %}
+              <span class="badge badge-amber">Reserved</span>
+            {% endif %}
+          </td>
+          <td class="small">
+            {% if r.status == 'Available' %}
+              Operational
+            {% else %}
+              <span class="mono">{{ r.unavailable_day }} {{ r.unavail_start_min | mins_to_hhmm }}-{{ r.unavail_end_min | mins_to_hhmm }}</span><br>{{ r.reason }}
+            {% endif %}
+          </td>
+          <td>
+            <form method="post" style="display:flex;gap:0.35rem;flex-wrap:wrap;align-items:center;">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="room_id" value="{{ r.id }}">
+              <select name="status" aria-label="Status for {{ r.room_code }}">
+                {% for st in room_statuses %}<option value="{{ st }}" {% if r.status == st %}selected{% endif %}>{{ st }}</option>{% endfor %}
+              </select>
+              <select name="unavailable_day" aria-label="Blocked day">
+                <option value="ALL" {% if r.unavailable_day == 'ALL' %}selected{% endif %}>ALL</option>
+                {% for d in valid_days %}<option value="{{ d }}" {% if r.unavailable_day == d %}selected{% endif %}>{{ d }}</option>{% endfor %}
+              </select>
+              <input name="reason" value="{{ r.reason }}" placeholder="Reason" style="max-width:160px;">
+              <button type="submit" class="btn btn-outline btn-sm">Update</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

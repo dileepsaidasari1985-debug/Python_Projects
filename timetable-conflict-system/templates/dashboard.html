@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<section class="hero-banner">
+  <div>
+    <span class="hero-tag">CASE STUDY #23 &bull; STRINGS, TUPLES &amp; NESTED LOOPS</span>
+    <h2>Student Timetable Conflict Detection</h2>
+    <p>Parse pipe-delimited schedule strings into immutable tuples, detect overlapping time windows across weekdays, flag rooms under maintenance or reservation, and suggest conflict-free alternative slots.</p>
+  </div>
+  <div class="hero-actions">
+    <a href="{{ url_for('validator') }}" class="btn btn-primary">Open Validator</a>
+    <a href="{{ url_for('courses') }}" class="btn btn-outline">Manage Courses</a>
+  </div>
+</section>
+
+<section class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-label">Catalog Courses</div>
+    <div class="kpi-value">{{ courses | length }}</div>
+    <div class="kpi-meta">{{ catalog_report.total_hours }} scheduled hrs/week</div>
+  </div>
+  <div class="kpi-card is-green">
+    <div class="kpi-label">Available Rooms</div>
+    <div class="kpi-value">{{ avail_rooms }} / {{ rooms | length }}</div>
+    <div class="kpi-meta">{{ rooms | length - avail_rooms }} blocked/maintenance</div>
+  </div>
+  <div class="kpi-card is-red">
+    <div class="kpi-label">Catalog Conflicts</div>
+    <div class="kpi-value">{{ catalog_report.total_conflicts }}</div>
+    <div class="kpi-meta">{{ catalog_report.time_conflict_count }} overlaps &bull; {{ catalog_report.room_issue_count }} room alerts</div>
+  </div>
+  <div class="kpi-card is-amber">
+    <div class="kpi-label">Saved Proposals</div>
+    <div class="kpi-value">{{ valid_proposals }} / {{ valid_proposals + conflicted_proposals }}</div>
+    <div class="kpi-meta">Valid vs. conflicted schedules</div>
+  </div>
+</section>
+
+<div class="grid-2">
+  <section class="card">
+    <div class="card-header">
+      <h3>Active Catalog Conflicts Detected</h3>
+      <a href="{{ url_for('validator') }}" class="btn btn-outline btn-sm">Run Custom Check</a>
+    </div>
+    {% if catalog_report.time_conflicts or catalog_report.room_issues %}
+      <ul style="margin:0;padding-left:1.1rem;display:flex;flex-direction:column;gap:0.55rem;">
+        {% for tc in catalog_report.time_conflicts %}
+          <li><span class="badge badge-red">{{ tc.kind }}</span> {{ tc.message }}</li>
+        {% endfor %}
+        {% for ri in catalog_report.room_issues %}
+          <li><span class="badge badge-amber">ROOM {{ ri.status | upper }}</span> {{ ri.course_code }} ({{ ri.day }} {{ ri.slot }}): {{ ri.reason }}</li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted">Zero conflicts detected across the catalog.</p>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <div class="card-header">
+      <h3>Recent Student Timetable Proposals</h3>
+      <a href="{{ url_for('proposals') }}" class="btn btn-outline btn-sm">View All</a>
+    </div>
+    <div tabindex="0" role="region" aria-label="Recent proposals" class="table-wrapper">
+      <table class="responsive-stack">
+        <thead>
+          <tr><th>ID</th><th>Student</th><th>Status</th><th>Conflicts</th></tr>
+        </thead>
+        <tbody>
+          {% for p in proposals %}
+          <tr>
+            <th><a href="{{ url_for('proposal_detail', proposal_id=p.proposal_id) }}">{{ p.proposal_id }}</a></th>
+            <td>{{ p.student_name }} ({{ p.student_id }})</td>
+            <td>
+              {% if p.is_valid %}
+                <span class="badge badge-green">Valid</span>
+              {% else %}
+                <span class="badge badge-red">Invalid</span>
+              {% endif %}
+            </td>
+            <td>{{ p.conflict_count }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

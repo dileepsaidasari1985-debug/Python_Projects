@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% block title %}Timetable Validator{% endblock %}
+{% block page_title %}Proposed Timetable Validator{% endblock %}
+{% block page_subtitle %}Test course combinations or raw schedule strings for overlaps and unavailable rooms{% endblock %}
+
+{% block content %}
+<div class="grid-2">
+  <section class="card">
+    <div class="card-header">
+      <h3>1. Choose Courses from Catalog</h3>
+    </div>
+    <form method="post" class="form-grid">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="input_mode" value="catalog">
+      <div class="field">
+        <label for="cat-sid">Student ID</label>
+        <input id="cat-sid" name="student_id" value="STU2399" required data-error="cat-sid-err">
+        <span id="cat-sid-err" class="error-msg">Student ID is required.</span>
+      </div>
+      <div class="field">
+        <label for="cat-sname">Student Name</label>
+        <input id="cat-sname" name="student_name" value="Ananya Krishnan" required data-error="cat-sname-err">
+        <span id="cat-sname-err" class="error-msg">Student name is required.</span>
+      </div>
+      <div class="field field-full">
+        <label>Select Proposed Courses</label>
+        <div class="check-list">
+          {% for c in all_courses %}
+          <label class="check-card">
+            <input type="checkbox" name="course_codes" value="{{ c.course_code }}" {% if c.course_code in selected_codes %}checked{% endif %}>
+            <div>
+              <strong>{{ c.course_code }}</strong> &mdash; {{ c.course_title }}<br>
+              <span class="small muted mono">{{ c.day }} {{ c.start_time }}-{{ c.end_time }} | {{ c.room_code }}</span>
+            </div>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="field-full" style="display:flex;gap:0.65rem;flex-wrap:wrap;">
+        <button type="submit" name="action" value="validate" class="btn btn-primary">Validate Selection</button>
+        <button type="submit" name="action" value="save" class="btn btn-success">Validate &amp; Save Proposal</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="card">
+    <div class="card-header">
+      <h3>2. Parse Raw Schedule Strings</h3>
+    </div>
+    <form method="post" class="form-grid">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="input_mode" value="strings">
+      <div class="field field-full">
+        <label for="raw_schedules">One entry per line: <code class="mono">CODE | TITLE | Day HH:MM-HH:MM | ROOM</code></label>
+        <textarea id="raw_schedules" name="raw_schedules" rows="9" class="mono" required data-error="raw-err">{{ raw_text }}</textarea>
+        <span id="raw-err" class="error-msg">Enter at least one schedule line.</span>
+      </div>
+      <input type="hidden" name="student_id" value="STU2399">
+      <input type="hidden" name="student_name" value="Custom String Check">
+      <div class="field-full" style="display:flex;gap:0.65rem;">
+        <button type="submit" name="action" value="validate" class="btn btn-primary">Parse &amp; Detect Conflicts</button>
+        <button type="submit" name="action" value="save" class="btn btn-outline">Save String Proposal</button>
+      </div>
+    </form>
+  </section>
+</div>
+
+{% if parse_errors %}
+<section class="card">
+  <h3 style="margin-top:0;color:var(--red-700);">Schedule Parsing Errors</h3>
+  <ul style="margin:0;">
+    {% for err in parse_errors %}<li>{{ err }}</li>{% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% if report %}
+<section class="card">
+  <div class="card-header">
+    <h3>Validation Result:
+      {% if report.is_valid %}
+        <span class="badge badge-green">VALID TIMETABLE (0 CONFLICTS)</span>
+      {% else %}
+        <span class="badge badge-red">INVALID ({{ report.total_conflicts }} CONFLICT(S))</span>
+      {% endif %}
+    </h3>
+    <span class="small muted">{{ report.total_courses }} courses &bull; {{ report.total_hours }} hrs/week</span>
+  </div>
+
+  {% if report.time_conflicts or report.room_issues %}
+  <div class="grid-2" style="margin-bottom:1.25rem;">
+    <div>
+      <h4 style="margin-top:0;">Overlapping Periods ({{ report.time_conflict_count }})</h4>
+      {% if report.time_conflicts %}
+        <ul>
+          {% for tc in report.time_conflicts %}
+            <li><strong>{{ tc.course_a }} &harr; {{ tc.course_b }}</strong> ({{ tc.day }} {{ tc.overlap_window }}): {{ tc.message }}</li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="muted">No time overlaps detected.</p>
+      {% endif %}
+    </div>
+    <div>
+      <h4 style="margin-top:0;">Unavailable / Blocked Rooms ({{ report.room_issue_count }})</h4>
+      {% if report.room_issues %}
+        <ul>
+          {% for ri in report.room_issues %}
+            <li><strong>{{ ri.course_code }}</strong> in <span class="mono">{{ ri.room_code }}</span>: {{ ri.reason }}</li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="muted">All assigned rooms are available.</p>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if report.suggestions %}
+  <div class="alert alert-warning" style="margin-bottom:1.25rem;flex-direction:column;align-items:flex-start;">
+    <strong>Suggested Conflict-Free Alternative Slots:</strong>
+    <ul style="margin:0.25rem 0 0;">
+      {% for code, slot in report.suggestions %}
+        <li>Move <strong>{{ code }}</strong> &rarr; <span class="mono">{{ slot }}</span></li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  <h4>Weekly Visual Grid</h4>
+  <div tabindex="0" role="region" aria-label="Weekly timetable grid" class="table-wrapper">
+    <table class="timetable-grid">
+      <thead>
+        <tr>
+          <th>Time Slot</th>
+          {% for d in valid_days %}<th>{{ d }}</th>{% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in report.weekly_matrix %}
+        <tr>
+          <th class="mono">{{ row.slot_label }}</th>
+          {% for cell in row.cells %}
+          <td>
+            {% for item in cell.courses %}
+              <div class="slot-pill {% if cell.has_conflict %}is-conflict{% endif %}">
+                <strong>{{ item.code }}</strong><br>
+                <span class="mono">{{ item.room }}</span>
+              </div>
+            {% endfor %}
+          </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <h4 style="margin-top:1.25rem;">Python Loop-Generated ASCII Timetable Pattern</h4>
+  <pre class="ascii-box">{{ report.ascii_pattern }}</pre>
+</section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Course Schedules{% endblock %}
+{% block page_title %}Course Schedule Catalog{% endblock %}
+{% block page_subtitle %}Add, filter, and inspect course schedule strings &amp; tuple representations{% endblock %}
+
+{% block content %}
+<section class="card">
+  <div class="card-header"><h3>Add New Course Schedule</h3></div>
+  <form method="post" class="form-grid">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="field">
+      <label for="course_code">Course Code</label>
+      <input id="course_code" name="course_code" placeholder="CS204" required data-error="code-err">
+      <span id="code-err" class="error-msg">Enter a valid course code (min 2 chars).</span>
+    </div>
+    <div class="field">
+      <label for="course_title">Course Title</label>
+      <input id="course_title" name="course_title" placeholder="Software Engineering" required data-error="title-err">
+      <span id="title-err" class="error-msg">Course title is required.</span>
+    </div>
+    <div class="field">
+      <label for="instructor">Instructor</label>
+      <input id="instructor" name="instructor" placeholder="Dr. K. Sharma">
+    </div>
+    <div class="field">
+      <label for="day">Day</label>
+      <select id="day" name="day" required>
+        {% for d in valid_days %}<option value="{{ d }}">{{ d }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="start_time">Start Time (24h HH:MM)</label>
+      <input id="start_time" name="start_time" value="09:00" required pattern="[0-2][0-9]:[0-5][0-9]" data-error="st-err">
+      <span id="st-err" class="error-msg">Use 24-hour HH:MM format (e.g., 09:00).</span>
+    </div>
+    <div class="field">
+      <label for="end_time">End Time (24h HH:MM)</label>
+      <input id="end_time" name="end_time" value="10:30" required pattern="[0-2][0-9]:[0-5][0-9]" data-error="et-err">
+      <span id="et-err" class="error-msg">Use 24-hour HH:MM format (e.g., 10:30).</span>
+    </div>
+    <div class="field">
+      <label for="room_code">Room</label>
+      <select id="room_code" name="room_code">
+        {% for r in rooms %}<option value="{{ r.room_code }}">{{ r.room_code }} ({{ r.building }} - {{ r.status }})</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="credits">Credits (1-6)</label>
+      <input id="credits" name="credits" type="number" min="1" max="6" value="3" required>
+    </div>
+    <div class="field-full">
+      <button type="submit" class="btn btn-primary">Add Course Schedule</button>
+    </div>
+  </form>
+</section>
+
+<section class="card">
+  <div class="card-header">
+    <h3>Registered Courses ({{ courses | length }})</h3>
+    <form method="get" style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+      <select name="day" aria-label="Filter by day">
+        <option value="">All Days</option>
+        {% for d in valid_days %}
+          <option value="{{ d }}" {% if day_filter == d %}selected{% endif %}>{{ d }}</option>
+        {% endfor %}
+      </select>
+      <input type="search" name="q" value="{{ search }}" placeholder="Search code, title, room" aria-label="Search courses">
+      <button type="submit" class="btn btn-outline btn-sm">Filter</button>
+    </form>
+  </div>
+  <div tabindex="0" role="region" aria-label="Course catalog table" class="table-wrapper">
+    <table class="responsive-stack">
+      <thead>
+        <tr><th>Code</th><th>Title</th><th>Schedule</th><th>Room</th><th>Canonical String</th><th>Action</th></tr>
+      </thead>
+      <tbody>
+        {% for c in courses %}
+        <tr>
+          <th class="mono">{{ c.course_code }}</th>
+          <td>{{ c.course_title }}<br><span class="small muted">{{ c.instructor }} &bull; {{ c.credits }} cr</span></td>
+          <td class="mono">{{ c.day }} {{ c.start_time }}-{{ c.end_time }}</td>
+          <td class="mono">{{ c.room_code }}</td>
+          <td class="mono small">{{ c.schedule_string }}</td>
+          <td>
+            <form method="post" action="{{ url_for('remove_course', course_id=c.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="button" class="btn btn-danger btn-sm" data-confirm-form data-confirm-msg="Delete {{ c.course_code }} from catalog?">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

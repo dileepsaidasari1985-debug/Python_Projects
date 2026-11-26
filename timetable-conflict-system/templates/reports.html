@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Reports &amp; ASCII Grid{% endblock %}
+{% block page_title %}Timetable Conflict Reports &amp; Exports{% endblock %}
+{% block page_subtitle %}Day-wise course load, conflict audit, ASCII pattern &amp; CSV export{% endblock %}
+
+{% block content %}
+<section class="card">
+  <div class="card-header">
+    <h3>Day-Wise Course Distribution</h3>
+    <div class="no-print" style="display:flex;gap:0.5rem;">
+      <a href="{{ url_for('export_csv') }}" class="btn btn-primary btn-sm">Download CSV Report</a>
+      <button type="button" class="btn btn-outline btn-sm" onclick="window.print()">Print Summary</button>
+    </div>
+  </div>
+  <div tabindex="0" role="region" aria-label="Day distribution" class="table-wrapper">
+    <table class="responsive-stack">
+      <thead><tr><th>Day</th><th>Scheduled Courses</th><th>Visual Load Bar</th></tr></thead>
+      <tbody>
+        {% for day, cnt in report.day_counts %}
+        <tr>
+          <th>{{ day }}</th>
+          <td>{{ cnt }}</td>
+          <td class="mono">{{ "█" * (cnt * 4) if cnt else "—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="card">
+  <div class="card-header"><h3>Full Catalog ASCII Pattern</h3></div>
+  <pre class="ascii-box">{{ report.ascii_pattern }}</pre>
+</section>
+{% endblock %}
