@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}ATM Terminal Menu{% endblock %}
+{% block page_title %}ATM Transaction Terminal{% endblock %}
+{% block page_subtitle %}Interactive ATM menu screen for simulated banking operations{% endblock %}
+
+{% block content %}
+<div class="atm-console">
+  <div class="atm-bezel">
+    <div class="atm-screen-header">
+      <div>
+        <span class="atm-tag">EDUCATIONAL ATM TERMINAL #13</span>
+        <h2>{% if exited %}Thank You for Using Smart ATM{% else %}Welcome, {{ account.holder_name }}{% endif %}</h2>
+      </div>
+      <div class="atm-acct-badge">
+        <span>Account: <strong class="mono">{{ account.account_number }}</strong></span>
+        <span>Balance: <strong>{{ account.current_balance | inr }}</strong></span>
+      </div>
+    </div>
+
+    {% if exited %}
+      <div class="atm-exit-panel">
+        <div class="exit-icon" aria-hidden="true">✓</div>
+        <h3>ATM Simulation Session Ended</h3>
+        <p>Your simulated card session has been closed safely. All transactions remain persisted in the SQLite database.</p>
+        <div class="exit-summary-box">
+          <div><span>Current Simulated Balance</span><strong>{{ account.current_balance | inr }}</strong></div>
+          <div><span>Successful Transactions</span><strong>{{ summary.total_successful }}</strong></div>
+          <div><span>Rejected Transactions</span><strong>{{ summary.total_rejected }}</strong></div>
+          <div><span>Last Activity</span><strong>{{ last_txn_date or 'No transactions yet' }}</strong></div>
+        </div>
+        <div class="exit-actions">
+          <a href="{{ url_for('atm_menu') }}" class="btn btn-primary">Start New ATM Session</a>
+          <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Return to Dashboard</a>
+        </div>
+      </div>
+    {% else %}
+      <p class="atm-prompt">Please select an ATM transaction option below:</p>
+
+      <div class="atm-menu-grid">
+        <a href="{{ url_for('balance_inquiry') }}" class="atm-option-card">
+          <span class="atm-key">1</span>
+          <div>
+            <strong>Balance Inquiry</strong>
+            <span>Check simulated balance, deposits, withdrawals &amp; daily limit</span>
+          </div>
+        </a>
+
+        <a href="{{ url_for('deposit') }}" class="atm-option-card option-green">
+          <span class="atm-key">2</span>
+          <div>
+            <strong>Cash Deposit</strong>
+            <span>Credit funds into {{ account.account_number }} with receipt ID</span>
+          </div>
+        </a>
+
+        <a href="{{ url_for('withdrawal') }}" class="atm-option-card option-red">
+          <span class="atm-key">3</span>
+          <div>
+            <strong>Cash Withdrawal</strong>
+            <span>Withdraw multiples of ₹{{ atm_settings.withdrawal_denomination }} up to {{ atm_settings.max_per_transaction | inr }}</span>
+          </div>
+        </a>
+
+        <a href="{{ url_for('transaction_history') }}" class="atm-option-card">
+          <span class="atm-key">4</span>
+          <div>
+            <strong>Transaction History</strong>
+            <span>Search, filter &amp; inspect all SQLite transaction logs</span>
+          </div>
+        </a>
+
+        <a href="{{ url_for('transaction_sequence') }}" class="atm-option-card option-accent">
+          <span class="atm-key">5</span>
+          <div>
+            <strong>Transaction Sequence Simulator</strong>
+            <span>Process a sequence of deposits &amp; withdrawals via Python loop</span>
+          </div>
+        </a>
+
+        <a href="{{ url_for('atm_menu', exit=1) }}" class="atm-option-card option-exit">
+          <span class="atm-key">6</span>
+          <div>
+            <strong>Exit ATM Session</strong>
+            <span>Close terminal session &amp; view simulated session summary</span>
+          </div>
+        </a>
+      </div>
+
+      <div class="atm-rules-strip">
+        <span>Min Withdrawal: <strong>{{ atm_settings.min_withdrawal | inr }}</strong></span>
+        <span>Max / Transaction: <strong>{{ atm_settings.max_per_transaction | inr }}</strong></span>
+        <span>Daily Remaining: <strong>{{ remaining_daily | inr }}</strong></span>
+        <span>Denomination: <strong>₹{{ atm_settings.withdrawal_denomination }}</strong></span>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

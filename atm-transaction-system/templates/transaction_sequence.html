@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% block title %}Transaction Sequence Simulator{% endblock %}
+{% block page_title %}ATM Transaction Sequence Simulator{% endblock %}
+{% block page_subtitle %}Case Study #13 Core: Process deposits and withdrawals sequentially via Python loop &amp; tuple unpacking{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <div>
+      <h2 id="seq-heading">Configure Transaction Sequence</h2>
+      <p class="muted">Starting Balance: <strong>{{ account.current_balance | inr }}</strong> &bull; Remaining Daily Limit: <strong>{{ remaining_daily | inr }}</strong></p>
+    </div>
+    <div class="header-actions">
+      <button type="button" id="load-example-seq" class="btn btn-secondary btn-sm">Load Example Sequence</button>
+      <button type="button" id="add-seq-row" class="btn btn-primary btn-sm">+ Add Step</button>
+    </div>
+  </div>
+
+  <div class="mode-tabs" role="tablist" aria-label="Sequence input mode">
+    <button type="button" role="tab" class="tab-btn {% if input_mode != 'text' %}is-active{% endif %}" data-seq-mode="builder" aria-selected="{{ 'true' if input_mode != 'text' else 'false' }}">
+      Interactive Row Builder
+    </button>
+    <button type="button" role="tab" class="tab-btn {% if input_mode == 'text' %}is-active{% endif %}" data-seq-mode="text" aria-selected="{{ 'true' if input_mode == 'text' else 'false' }}">
+      Batch Text Mode
+    </button>
+  </div>
+
+  <form action="{{ url_for('transaction_sequence') }}" method="POST" aria-labelledby="seq-heading" id="sequence-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="input_mode" id="input_mode" value="{{ input_mode }}">
+
+    <div id="builder-panel" class="{% if input_mode == 'text' %}is-hidden{% endif %}">
+      <div class="seq-rows" id="seq-rows-container">
+        {% for row in builder_rows %}
+          <div class="seq-row">
+            <span class="seq-step-badge">#{{ loop.index }}</span>
+            <div class="seq-field">
+              <label class="sr-only-label">Transaction Type</label>
+              <select name="txn_type[]" aria-label="Transaction Type for step {{ loop.index }}">
+                <option value="DEPOSIT" {% if row.type == 'DEPOSIT' %}selected{% endif %}>DEPOSIT</option>
+                <option value="WITHDRAWAL" {% if row.type == 'WITHDRAWAL' %}selected{% endif %}>WITHDRAWAL</option>
+              </select>
+            </div>
+            <div class="seq-field">
+              <label class="sr-only-label">Amount</label>
+              <input type="text" name="amount[]" value="{{ row.amount }}" inputmode="decimal" placeholder="Amount (₹)" aria-label="Amount for step {{ loop.index }}" required>
+            </div>
+            <div class="seq-field seq-field-desc">
+              <label class="sr-only-label">Description</label>
+              <input type="text" name="description[]" value="{{ row.description }}" placeholder="Optional description" aria-label="Description for step {{ loop.index }}">
+            </div>
+            <button type="button" class="btn-icon-remove" data-remove-row aria-label="Remove step {{ loop.index }}" title="Remove step">&times;</button>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div id="text-panel" class="{% if input_mode != 'text' %}is-hidden{% endif %}">
+      <div class="field">
+        <label for="sequence_text">Enter One Transaction Per Line</label>
+        <span id="seq-text-hint" class="hint">Format: <code>DEPOSIT 2000 | Note</code> or <code>WITHDRAWAL 500 | Note</code></span>
+        <textarea id="sequence_text" name="sequence_text" rows="7" aria-describedby="seq-text-hint">{{ sequence_text }}</textarea>
+      </div>
+    </div>
+
+    <div class="seq-footer-controls">
+      <label class="checkbox-inline">
+        <input type="checkbox" name="commit_to_db" {% if commit_to_db %}checked{% endif %}>
+        <span>Save processed transactions &amp; final balance to SQLite database</span>
+      </label>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Execute Transaction Sequence</button>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-ghost">Back to Dashboard</a>
+      </div>
+    </div>
+  </form>
+</div>
+
+{% if simulation %}
+  <section class="stats-grid" aria-label="Sequence execution summary">
+    <article class="stat-card stat-blue">
+      <div class="stat-header"><span>Opening Balance</span></div>
+      <div class="stat-value">{{ simulation.summary.opening_balance | inr }}</div>
+      <p class="stat-foot">Before sequence execution</p>
+    </article>
+    <article class="stat-card stat-green">
+      <div class="stat-header"><span>Closing Balance</span></div>
+      <div class="stat-value">{{ simulation.summary.closing_balance | inr }}</div>
+      <p class="stat-foot">Net change: {{ simulation.summary.net_change | inr }}</p>
+    </article>
+    <article class="stat-card stat-slate">
+      <div class="stat-header"><span>Successful Steps</span></div>
+      <div class="stat-value">{{ simulation.summary.success_count }} / {{ simulation.summary.total_attempted }}</div>
+      <p class="stat-foot">Deposited: {{ simulation.summary.total_deposited | inr }}</p>
+    </article>
+    <article class="stat-card stat-red">
+      <div class="stat-header"><span>Rejected Steps</span></div>
+      <div class="stat-value">{{ simulation.summary.rejected_count }}</div>
+      <p class="stat-foot">Withdrawn: {{ simulation.summary.total_withdrawn | inr }}</p>
+    </article>
+  </section>
+
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <h3 id="seq-results-caption">Step-by-Step Python Sequence Trace</h3>
+        <p class="muted">Processed sequentially in Python using a <code>for</code> loop, tuple unpacking, and nested lists</p>
+      </div>
+    </div>
+
+    <div tabindex="0" role="region" aria-labelledby="seq-results-caption" class="table-wrapper">
+      <table class="data-table">
+        <caption class="visually-hidden">ATM transaction sequence execution trace</caption>
+        <thead>
+          <tr>
+            <th>Step #</th>
+            <th>Transaction ID</th>
+            <th>Type</th>
+            <th>Amount</th>
+            <th>Balance Before</th>
+            <th>Balance After</th>
+            <th>Status</th>
+            <th>Rejection Reason / Note</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for step in simulation.results %}
+            <tr class="{% if step.status == 'REJECTED' %}row-rejected{% endif %}">
+              <th>#{{ step.step_number }}</th>
+              <td class="mono">{{ step.transaction_id }}</td>
+              <td><span class="type-badge type-{{ step.transaction_type | lower }}">{{ step.transaction_type }}</span></td>
+              <td class="mono">{{ step.amount | inr }}</td>
+              <td class="mono">{{ step.balance_before | inr }}</td>
+              <td class="mono"><strong>{{ step.balance_after | inr }}</strong></td>
+              <td><span class="status-badge status-{{ step.status | lower }}">{{ step.status }}</span></td>
+              <td>
+                <div>{{ step.description }}</div>
+                {% if step.rejection_reason %}
+                  <div class="text-red small">{{ step.rejection_reason }}</div>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% endif %}
+{% endblock %}

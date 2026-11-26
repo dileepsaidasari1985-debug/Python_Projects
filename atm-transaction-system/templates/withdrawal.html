@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}Cash Withdrawal{% endblock %}
+{% block page_title %}ATM Cash Withdrawal{% endblock %}
+{% block page_subtitle %}Enforces minimum, denomination, per-transaction, daily, and balance rules{% endblock %}
+
+{% block content %}
+<div class="two-col-layout">
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <h2 id="withdraw-form-heading">Withdraw Cash</h2>
+        <p class="muted">Validated server-side against active ATM rules and live balance.</p>
+      </div>
+      <span class="status-badge status-success">Available: {{ account.current_balance | inr }}</span>
+    </div>
+
+    <div class="rules-callout">
+      <div><span>Min Withdrawal</span><strong>{{ settings.min_withdrawal | inr }}</strong></div>
+      <div><span>Max / Transaction</span><strong>{{ settings.max_per_transaction | inr }}</strong></div>
+      <div><span>Daily Limit Left</span><strong>{{ remaining_daily | inr }}</strong></div>
+      <div><span>Denomination</span><strong>Multiple of ₹{{ settings.withdrawal_denomination }}</strong></div>
+    </div>
+
+    <form action="{{ url_for('withdrawal') }}" method="POST" aria-labelledby="withdraw-form-heading" class="atm-form" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="field">
+        <label for="wd_account_number">Simulated Account Number <span aria-hidden="true">*</span></label>
+        <span id="wd-acct-hint" class="hint">Active demo account: DEMO1001 ({{ account.holder_name }})</span>
+        <input
+          type="text"
+          id="wd_account_number"
+          name="account_number"
+          value="{{ form_data.account_number }}"
+          required
+          autocorrect="off"
+          autocapitalize="characters"
+          spellcheck="false"
+          aria-describedby="wd-acct-hint"
+          data-error="wd-acct-error"
+        >
+        <div id="wd-acct-error" class="error-msg">
+          <span role="img" aria-label="Error">!</span> Please enter the simulated account number.
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="withdrawal_amount">Withdrawal Amount (₹) <span aria-hidden="true">*</span></label>
+        <span id="wd-amt-hint" class="hint">Enter a positive multiple of ₹{{ settings.withdrawal_denomination }} (e.g., 500, 1000, 2500).</span>
+        <input
+          type="text"
+          id="withdrawal_amount"
+          name="amount"
+          value="{{ form_data.amount }}"
+          inputmode="numeric"
+          enterkeyhint="next"
+          placeholder="e.g., 1000"
+          required
+          pattern="^\d+(\.\d{1,2})?$"
+          aria-describedby="wd-amt-hint"
+          data-error="wd-amt-error"
+        >
+        <div id="wd-amt-error" class="error-msg">
+          <span role="img" aria-label="Error">!</span> Enter a valid numeric withdrawal amount.
+        </div>
+      </div>
+
+      <div class="preset-row" aria-label="Quick withdrawal amount presets">
+        <span class="preset-label">Quick Cash:</span>
+        {% for amt in presets %}
+          <button type="button" class="preset-chip" data-fill-target="withdrawal_amount" data-fill-value="{{ amt }}">
+            {{ amt | inr }}
+          </button>
+        {% endfor %}
+      </div>
+
+      <div class="field">
+        <label for="wd_desc">Transaction Description (Optional)</label>
+        <input
+          type="text"
+          id="wd_desc"
+          name="description"
+          value="{{ form_data.description }}"
+          maxlength="120"
+          enterkeyhint="done"
+          placeholder="e.g., Hostel / Bookstore cash"
+        >
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-danger">Dispense Cash</button>
+        <a href="{{ url_for('atm_menu') }}" class="btn btn-ghost">Back to ATM Menu</a>
+      </div>
+    </form>
+  </section>
+
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <h3>Withdrawal Result &amp; Receipt</h3>
+        <p class="muted">Invalid attempts are logged as REJECTED without altering balance</p>
+      </div>
+    </div>
+
+    {% if outcome %}
+      <div class="outcome-card outcome-{{ outcome.status | lower }}">
+        <div class="outcome-top">
+          <span class="status-badge status-{{ outcome.status | lower }}">{{ outcome.status }}</span>
+          <span class="mono">{{ outcome.transaction_id }}</span>
+        </div>
+        <div class="outcome-metrics">
+          <div><span>Previous Balance</span><strong>{{ outcome.balance_before | inr }}</strong></div>
+          <div><span>Withdrawal</span><strong class="text-red">-{{ outcome.amount | inr }}</strong></div>
+          <div><span>New Balance</span><strong>{{ outcome.balance_after | inr }}</strong></div>
+        </div>
+        {% if outcome.rejection_reason %}
+          <p class="rejection-note"><strong>Rejection Reason:</strong> {{ outcome.rejection_reason }}</p>
+        {% endif %}
+      </div>
+
+      <h4 class="slip-title">Generated Python ATM Receipt Slip</h4>
+      <pre class="receipt-slip">{{ receipt_text }}</pre>
+      <div class="form-actions">
+        <a href="{{ url_for('transaction_details', transaction_id=outcome.transaction_id) }}" class="btn btn-secondary btn-sm">Open Full Details</a>
+      </div>
+    {% else %}
+      <div class="info-guide">
+        <h4>Active Withdrawal Guardrails</h4>
+        <ul>
+          <li>Rejects negative, zero, or non-numeric amounts.</li>
+          <li>Minimum per withdrawal: <strong>{{ settings.min_withdrawal | inr }}</strong>.</li>
+          <li>Maximum per transaction: <strong>{{ settings.max_per_transaction | inr }}</strong>.</li>
+          <li>Maximum daily limit: <strong>{{ settings.max_daily_withdrawal | inr }}</strong> (Used today: {{ daily_withdrawn | inr }}).</li>
+          <li>Must be an exact multiple of <strong>₹{{ settings.withdrawal_denomination }}</strong>.</li>
+          <li>Never allows the simulated account balance to drop below ₹0.00.</li>
+        </ul>
+      </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

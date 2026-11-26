@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Transaction {{ txn.transaction_id }}{% endblock %}
+{% block page_title %}Transaction Details{% endblock %}
+{% block page_subtitle %}Individual SQLite ledger record and printable ASCII ATM slip{% endblock %}
+
+{% block content %}
+<div class="two-col-layout">
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <h2 class="mono">{{ txn.transaction_id }}</h2>
+        <p class="muted">{{ txn.created_at }} &bull; Source: {{ txn.source }}</p>
+      </div>
+      <span class="status-badge status-{{ txn.status | lower }}">{{ txn.status }}</span>
+    </div>
+
+    <div class="summary-list">
+      <div class="summary-row"><span>Account Holder</span><strong>{{ account.holder_name }}</strong></div>
+      <div class="summary-row"><span>Simulated Account</span><strong class="mono">{{ txn.account_number }}</strong></div>
+      <div class="summary-row"><span>Transaction Type</span><strong>{{ txn.transaction_type }}</strong></div>
+      <div class="summary-row"><span>Transaction Amount</span><strong class="mono">{{ txn.amount | inr }}</strong></div>
+      <div class="summary-row"><span>Balance Before</span><strong class="mono">{{ txn.balance_before | inr }}</strong></div>
+      <div class="summary-row"><span>Balance After</span><strong class="mono">{{ txn.balance_after | inr }}</strong></div>
+      <div class="summary-row"><span>Description</span><strong>{{ txn.description }}</strong></div>
+      {% if txn.rejection_reason %}
+        <div class="summary-row"><span>Rejection Reason</span><strong class="text-red">{{ txn.rejection_reason }}</strong></div>
+      {% endif %}
+    </div>
+
+    <div class="form-actions">
+      <button type="button" class="btn btn-primary" data-print-btn>Print Receipt</button>
+      <a href="{{ url_for('transaction_history') }}" class="btn btn-ghost">Back to History</a>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <h3>ASCII ATM Receipt Slip</h3>
+        <p class="muted">Generated via Python pattern generation</p>
+      </div>
+    </div>
+    <pre class="receipt-slip">{{ receipt_text }}</pre>
+  </section>
+</div>
+{% endblock %}

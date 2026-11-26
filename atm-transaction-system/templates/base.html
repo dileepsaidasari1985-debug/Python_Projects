@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Smart ATM Simulation{% endblock %} | Case Study #13</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <div class="app-shell">
+    <!-- Responsive Navigation Drawer (acts as persistent sidebar on desktop, swipe/modal drawer on mobile) -->
+    <div class="Drawer" id="drawer" popover="manual" role="dialog" aria-label="Primary navigation">
+      <div class="Drawer-scroller">
+        <aside class="Drawer-sheet sidebar" aria-label="ATM System Navigation">
+          <div class="sidebar-header">
+            <a href="{{ url_for('dashboard') }}" class="brand">
+              <img src="{{ url_for('static', filename='images/atm-logo.svg') }}" alt="" width="38" height="38">
+              <div>
+                <span class="brand-title">Smart ATM</span>
+                <span class="brand-sub">Case Study #13</span>
+              </div>
+            </a>
+            <button type="button" id="drawer-close" class="drawer-close-btn" aria-label="Close navigation menu" autofocus>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M18 6L6 18M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+
+          <div class="demo-account-chip">
+            <span class="chip-badge">DEMO SIMULATION</span>
+            <strong>{{ active_account.holder_name }}</strong>
+            <span class="mono">{{ active_account.account_number }}</span>
+            <span class="chip-balance">{{ active_account.current_balance | inr }}</span>
+          </div>
+
+          <nav class="sidebar-nav" aria-label="Main sections">
+            <p class="nav-group-label">Overview</p>
+            <a href="{{ url_for('dashboard') }}" class="nav-link {% if current_endpoint == 'dashboard' %}is-active{% endif %}">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+              <span>Dashboard</span>
+            </a>
+            <a href="{{ url_for('atm_menu') }}" class="nav-link {% if current_endpoint == 'atm_menu' %}is-active{% endif %}">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 10h12M6 14h6"/></svg>
+              <span>ATM Terminal Menu</span>
+            </a>
+
+            <p class="nav-group-label">Transactions</p>
+            <a href="{{ url_for('deposit') }}" class="nav-link {% if current_endpoint == 'deposit' %}is-active{% endif %}">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+              <span>Cash Deposit</span>
+            </a>
+            <a href="{{ url_for('withdrawal') }}" class="nav-link {% if current_endpoint == 'withdrawal' %}is-active{% endif %}">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+              <span>Cash Withdrawal</span>
+            </a>
+            <a href="{{ url_for('balance_inquiry') }}" class="nav-link {% if current_endpoint == 'balance_inquiry' %}is-active{% endif %}">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 7h20v10H2z"/><circle cx="12" cy="12" r="2.5"/></svg>
+              <span>Balance Inquiry</span>
+            </a>
+            <a href="{{ url_for('transaction_sequence') }}" class="nav-link {% if current_endpoint == 'transaction_sequence' %}is-active{% endif %}">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+              <span>Sequence Simulator</span>
+            </a>
+
+            <p class="nav-group-label">Records & Rules</p>
+            <a href="{{ url_for('transaction_history') }}" class="nav-link {% if current_endpoint in ('transaction_history', 'transaction_details') %}is-active{% endif %}">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+              <span>Transaction History</span>
+            </a>
+            <a href="{{ url_for('reports') }}" class="nav-link {% if current_endpoint == 'reports' %}is-active{% endif %}">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15v-4M12 15V7M17 15v-6"/></svg>
+              <span>Summary & Reports</span>
+            </a>
+            <a href="{{ url_for('settings') }}" class="nav-link {% if current_endpoint == 'settings' %}is-active{% endif %}">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.77 1 1.51 1H21a2 2 0 0 1 0 4h-.09c-.74 0-1.25.4-1.51 1z"/></svg>
+              <span>ATM Settings</span>
+            </a>
+          </nav>
+
+          <div class="sidebar-footer">
+            <p>Educational Python Simulation</p>
+            <p class="muted">No real banking or payment gateway connection.</p>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <div class="main-shell">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button type="button" id="drawer-open" class="menu-toggle-btn" aria-label="Open navigation menu" aria-expanded="false" aria-controls="drawer">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M3 6h18M3 12h18M3 18h18"/>
+            </svg>
+          </button>
+          <div>
+            <h1 class="page-heading">{% block page_title %}ATM Dashboard{% endblock %}</h1>
+            <p class="page-subtitle">{% block page_subtitle %}Smart ATM Transaction and Banking Simulation System{% endblock %}</p>
+          </div>
+        </div>
+
+        <div class="topbar-right">
+          <div class="status-pill" title="Simulated educational account">
+            <span class="dot-live" aria-hidden="true"></span>
+            <span>Demo: <strong>{{ active_account.account_number }}</strong></span>
+            <span class="pill-sep" aria-hidden="true">|</span>
+            <span>Balance: <strong>{{ active_account.current_balance | inr }}</strong></span>
+          </div>
+          <a href="{{ url_for('transaction_sequence') }}" class="btn btn-primary btn-sm">Run Sequence</a>
+        </div>
+      </header>
+
+      <main class="content-area" id="main-content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class="flash-stack" role="status" aria-live="polite">
+              {% for category, msg in messages %}
+                <div class="alert alert-{{ category }}">
+                  <span class="alert-tag">{{ category | upper }}</span>
+                  <span>{{ msg }}</span>
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

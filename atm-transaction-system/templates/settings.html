@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block title %}ATM Settings{% endblock %}
+{% block page_title %}ATM Rules &amp; Simulation Settings{% endblock %}
+{% block page_subtitle %}Configure withdrawal limits, denomination multiples, initial balance, or reset demo data{% endblock %}
+
+{% block content %}
+<div class="two-col-layout">
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <h2 id="settings-form-heading">Configure ATM Rules</h2>
+        <p class="muted">Changes apply immediately to all single withdrawals and sequence simulations.</p>
+      </div>
+    </div>
+
+    <form action="{{ url_for('settings') }}" method="POST" aria-labelledby="settings-form-heading" class="atm-form" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="field">
+        <label for="max_per_transaction">Maximum Withdrawal per Transaction (₹) <span aria-hidden="true">*</span></label>
+        <span id="set-max-txn-hint" class="hint">Default: ₹10,000. Must be a multiple of the denomination.</span>
+        <input
+          type="text"
+          id="max_per_transaction"
+          name="max_per_transaction"
+          value="{{ settings.max_per_transaction | int if settings.max_per_transaction == settings.max_per_transaction | int else settings.max_per_transaction }}"
+          inputmode="numeric"
+          required
+          pattern="^\d+(\.\d{1,2})?$"
+          aria-describedby="set-max-txn-hint"
+          data-error="set-max-txn-error"
+        >
+        <div id="set-max-txn-error" class="error-msg">
+          <span role="img" aria-label="Error">!</span> Enter a valid positive amount.
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="max_daily_withdrawal">Maximum Daily Withdrawal (₹) <span aria-hidden="true">*</span></label>
+        <span id="set-daily-hint" class="hint">Default: ₹25,000. Must be greater than or equal to the per-transaction limit.</span>
+        <input
+          type="text"
+          id="max_daily_withdrawal"
+          name="max_daily_withdrawal"
+          value="{{ settings.max_daily_withdrawal | int if settings.max_daily_withdrawal == settings.max_daily_withdrawal | int else settings.max_daily_withdrawal }}"
+          inputmode="numeric"
+          required
+          pattern="^\d+(\.\d{1,2})?$"
+          aria-describedby="set-daily-hint"
+          data-error="set-daily-error"
+        >
+        <div id="set-daily-error" class="error-msg">
+          <span role="img" aria-label="Error">!</span> Enter a valid daily withdrawal limit.
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="min_withdrawal">Minimum Withdrawal Amount (₹) <span aria-hidden="true">*</span></label>
+        <span id="set-min-hint" class="hint">Default: ₹100. Must be positive and a multiple of the denomination.</span>
+        <input
+          type="text"
+          id="min_withdrawal"
+          name="min_withdrawal"
+          value="{{ settings.min_withdrawal | int if settings.min_withdrawal == settings.min_withdrawal | int else settings.min_withdrawal }}"
+          inputmode="numeric"
+          required
+          pattern="^\d+(\.\d{1,2})?$"
+          aria-describedby="set-min-hint"
+          data-error="set-min-error"
+        >
+        <div id="set-min-error" class="error-msg">
+          <span role="img" aria-label="Error">!</span> Enter a valid minimum withdrawal amount.
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="withdrawal_denomination">Withdrawal Denomination Multiple (₹) <span aria-hidden="true">*</span></label>
+        <span id="set-denom-hint" class="hint">Default: ₹100 (e.g., 100, 200, or 500).</span>
+        <input
+          type="text"
+          id="withdrawal_denomination"
+          name="withdrawal_denomination"
+          value="{{ settings.withdrawal_denomination }}"
+          inputmode="numeric"
+          required
+          pattern="^\d+$"
+          aria-describedby="set-denom-hint"
+          data-error="set-denom-error"
+        >
+        <div id="set-denom-error" class="error-msg">
+          <span role="img" aria-label="Error">!</span> Enter a positive whole integer denomination.
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="initial_demo_balance">Initial Demo Account Balance (₹) <span aria-hidden="true">*</span></label>
+        <span id="set-init-hint" class="hint">Used when resetting demo account DEMO1001 (default: ₹10,000).</span>
+        <input
+          type="text"
+          id="initial_demo_balance"
+          name="initial_demo_balance"
+          value="{{ settings.initial_demo_balance | int if settings.initial_demo_balance == settings.initial_demo_balance | int else settings.initial_demo_balance }}"
+          inputmode="decimal"
+          required
+          pattern="^\d+(\.\d{1,2})?$"
+          aria-describedby="set-init-hint"
+          data-error="set-init-error"
+        >
+        <div id="set-init-error" class="error-msg">
+          <span role="img" aria-label="Error">!</span> Enter a valid non-negative initial balance.
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Save ATM Rules</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="card danger-zone-card">
+    <div class="card-header">
+      <div>
+        <h3>Reset Demo Account Data</h3>
+        <p class="muted">Safely restore DEMO1001 to its configured initial balance</p>
+      </div>
+    </div>
+
+    <div class="summary-list">
+      <div class="summary-row"><span>Account Holder</span><strong>{{ account.holder_name }}</strong></div>
+      <div class="summary-row"><span>Account Number</span><strong class="mono">{{ account.account_number }}</strong></div>
+      <div class="summary-row"><span>Current Balance</span><strong>{{ account.current_balance | inr }}</strong></div>
+      <div class="summary-row"><span>Configured Reset Balance</span><strong>{{ settings.initial_demo_balance | inr }}</strong></div>
+      <div class="summary-row"><span>Settings Last Updated</span><strong>{{ settings.updated_at }}</strong></div>
+    </div>
+
+    <div class="reset-warning">
+      <p>Resetting deletes all transaction history rows for <strong>DEMO1001</strong> from SQLite and resets the balance to <strong>{{ settings.initial_demo_balance | inr }}</strong>. Confirmation is required.</p>
+      <button type="button" class="btn btn-danger" command="show-modal" commandfor="reset-dialog" id="open-reset-dialog">
+        Reset Demo Account
+      </button>
+    </div>
+  </section>
+</div>
+
+<!-- Native modal dialog per modern-web-guidance (no role="dialog" or aria-modal on native modal) -->
+<dialog id="reset-dialog" aria-labelledby="reset-dialog-title">
+  <h1 id="reset-dialog-title" class="dialog-title">Reset Demo Account DEMO1001?</h1>
+  <p class="dialog-body">
+    This will permanently clear all recorded simulated transactions in SQLite and restore the balance of
+    <strong>{{ account.account_number }}</strong> to <strong>{{ settings.initial_demo_balance | inr }}</strong>.
+  </p>
+  <div class="dialog-actions">
+    <form method="dialog">
+      <button type="submit" value="cancel" class="btn btn-ghost" autofocus>Cancel</button>
+    </form>
+    <form action="{{ url_for('reset_account') }}" method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-danger">Confirm Reset</button>
+    </form>
+  </div>
+</dialog>
+{% endblock %}

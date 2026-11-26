@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}Transaction History{% endblock %}
+{% block page_title %}Transaction History{% endblock %}
+{% block page_subtitle %}Search, filter, sort, and inspect every simulated transaction stored in SQLite{% endblock %}
+
+{% block content %}
+<section class="card">
+  <div class="card-header">
+    <div>
+      <h2 id="history-filter-heading">Filter &amp; Search Ledger</h2>
+      <p class="muted">Showing {{ transactions | length }} matching transaction(s)</p>
+    </div>
+    <a href="{{ url_for('export_csv', q=filters.q, type=filters.type, status=filters.status, date=filters.date, sort=filters.sort) }}" class="btn btn-secondary btn-sm">
+      Export Filtered CSV
+    </a>
+  </div>
+
+  <search>
+    <form action="{{ url_for('transaction_history') }}" method="GET" aria-labelledby="history-filter-heading" class="filter-grid">
+      <div class="field">
+        <label for="filter_q">Search Transaction ID / Note</label>
+        <input type="search" id="filter_q" name="q" value="{{ filters.q }}" placeholder="e.g., TXN-2026..." autocorrect="off" autocapitalize="none" spellcheck="false">
+      </div>
+
+      <div class="field">
+        <label for="filter_type">Transaction Type</label>
+        <select id="filter_type" name="type">
+          <option value="">All Types</option>
+          <option value="DEPOSIT" {% if filters.type == 'DEPOSIT' %}selected{% endif %}>Deposits Only</option>
+          <option value="WITHDRAWAL" {% if filters.type == 'WITHDRAWAL' %}selected{% endif %}>Withdrawals Only</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="filter_status">Status</label>
+        <select id="filter_status" name="status">
+          <option value="">All Statuses</option>
+          <option value="SUCCESS" {% if filters.status == 'SUCCESS' %}selected{% endif %}>Successful</option>
+          <option value="REJECTED" {% if filters.status == 'REJECTED' %}selected{% endif %}>Rejected</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="filter_date">Date</label>
+        <input type="date" id="filter_date" name="date" value="{{ filters.date }}">
+      </div>
+
+      <div class="field">
+        <label for="filter_sort">Sort By</label>
+        <select id="filter_sort" name="sort">
+          <option value="newest" {% if filters.sort == 'newest' %}selected{% endif %}>Newest First</option>
+          <option value="oldest" {% if filters.sort == 'oldest' %}selected{% endif %}>Oldest First</option>
+          <option value="amount_desc" {% if filters.sort == 'amount_desc' %}selected{% endif %}>Amount: High to Low</option>
+          <option value="amount_asc" {% if filters.sort == 'amount_asc' %}selected{% endif %}>Amount: Low to High</option>
+        </select>
+      </div>
+
+      <div class="filter-actions">
+        <button type="submit" class="btn btn-primary">Apply Filters</button>
+        <a href="{{ url_for('transaction_history') }}" class="btn btn-ghost">Reset</a>
+      </div>
+    </form>
+  </search>
+</section>
+
+<section class="card">
+  <div class="card-header">
+    <div>
+      <h3 id="history-table-caption">SQLite Transaction Records</h3>
+      <p class="muted">Click any Transaction ID to view full receipt &amp; details</p>
+    </div>
+  </div>
+
+  {% if transactions %}
+    <div tabindex="0" role="region" aria-labelledby="history-table-caption" class="table-wrapper">
+      <table class="data-table">
+        <caption class="visually-hidden">Complete ATM transaction history</caption>
+        <thead>
+          <tr>
+            <th>Transaction ID</th>
+            <th>Date &amp; Time</th>
+            <th>Type</th>
+            <th>Amount</th>
+            <th>Balance After</th>
+            <th>Status</th>
+            <th>Description</th>
+            <th>Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for txn in transactions %}
+            <tr>
+              <th><a href="{{ url_for('transaction_details', transaction_id=txn.transaction_id) }}" class="mono link-primary">{{ txn.transaction_id }}</a></th>
+              <td>{{ txn.created_at }}</td>
+              <td><span class="type-badge type-{{ txn.transaction_type | lower }}">{{ txn.transaction_type }}</span></td>
+              <td class="mono {% if txn.transaction_type == 'DEPOSIT' %}text-green{% else %}text-red{% endif %}">{{ txn.amount | inr }}</td>
+              <td class="mono">{{ txn.balance_after | inr }}</td>
+              <td><span class="status-badge status-{{ txn.status | lower }}">{{ txn.status }}</span></td>
+              <td>
+                <div>{{ txn.description }}</div>
+                {% if txn.rejection_reason %}
+                  <div class="text-red small">{{ txn.rejection_reason }}</div>
+                {% endif %}
+              </td>
+              <td><a href="{{ url_for('transaction_details', transaction_id=txn.transaction_id) }}" class="btn btn-ghost btn-sm">View</a></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty-box">
+      <p>No transactions match your current search or filter criteria.</p>
+      <a href="{{ url_for('transaction_history') }}" class="btn btn-secondary">Clear Filters</a>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Transaction Summary & Reports{% endblock %}
+{% block page_title %}Transaction Summary &amp; Reports{% endblock %}
+{% block page_subtitle %}Comprehensive Python-computed financial summary and CSV export{% endblock %}
+
+{% block content %}
+<div class="report-toolbar">
+  <div>
+    <strong>Account: {{ account.holder_name }} ({{ account.account_number }})</strong>
+    <p class="muted">All figures computed dynamically from SQLite records</p>
+  </div>
+  <div class="header-actions">
+    <a href="{{ url_for('export_csv') }}" class="btn btn-success">Download CSV Report</a>
+    <button type="button" class="btn btn-secondary" data-print-btn>Print Summary</button>
+  </div>
+</div>
+
+<section class="stats-grid" aria-label="Report summary cards">
+  <article class="stat-card stat-blue">
+    <div class="stat-header"><span>Opening &rarr; Closing</span></div>
+    <div class="stat-value">{{ summary.closing_balance | inr }}</div>
+    <p class="stat-foot">Opening: {{ summary.opening_balance | inr }}</p>
+  </article>
+
+  <article class="stat-card stat-green">
+    <div class="stat-header"><span>Total Money Deposited</span></div>
+    <div class="stat-value">{{ summary.total_money_deposited | inr }}</div>
+    <p class="stat-foot">{{ summary.total_deposits_count }} successful deposits</p>
+  </article>
+
+  <article class="stat-card stat-red">
+    <div class="stat-header"><span>Total Money Withdrawn</span></div>
+    <div class="stat-value">{{ summary.total_money_withdrawn | inr }}</div>
+    <p class="stat-foot">{{ summary.total_withdrawals_count }} successful withdrawals</p>
+  </article>
+
+  <article class="stat-card stat-slate">
+    <div class="stat-header"><span>Net Balance Change</span></div>
+    <div class="stat-value {% if summary.net_balance_change >= 0 %}text-green{% else %}text-red{% endif %}">
+      {% if summary.net_balance_change >= 0 %}+{% endif %}{{ summary.net_balance_change | inr }}
+    </div>
+    <p class="stat-foot">Average txn: {{ summary.average_transaction_amount | inr }}</p>
+  </article>
+</section>
+
+<div class="two-col-layout">
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <h3>Complete Summary Metrics</h3>
+        <p class="muted">All required Case Study #13 metrics</p>
+      </div>
+    </div>
+    <div class="summary-list">
+      <div class="summary-row"><span>Opening Balance</span><strong>{{ summary.opening_balance | inr }}</strong></div>
+      <div class="summary-row"><span>Closing Balance</span><strong>{{ summary.closing_balance | inr }}</strong></div>
+      <div class="summary-row"><span>Current Balance</span><strong>{{ summary.current_balance | inr }}</strong></div>
+      <div class="summary-row"><span>Total Deposits (Count)</span><strong>{{ summary.total_deposits_count }}</strong></div>
+      <div class="summary-row"><span>Total Withdrawals (Count)</span><strong>{{ summary.total_withdrawals_count }}</strong></div>
+      <div class="summary-row"><span>Total Successful Transactions</span><strong class="text-green">{{ summary.total_successful }}</strong></div>
+      <div class="summary-row"><span>Total Rejected Transactions</span><strong class="text-red">{{ summary.total_rejected }}</strong></div>
+      <div class="summary-row"><span>Largest Deposit</span><strong>{{ summary.largest_deposit | inr }}</strong></div>
+      <div class="summary-row"><span>Largest Withdrawal</span><strong>{{ summary.largest_withdrawal | inr }}</strong></div>
+      <div class="summary-row"><span>Average Transaction Amount</span><strong>{{ summary.average_transaction_amount | inr }}</strong></div>
+      <div class="summary-row"><span>Total Money Deposited</span><strong class="text-green">{{ summary.total_money_deposited | inr }}</strong></div>
+      <div class="summary-row"><span>Total Money Withdrawn</span><strong class="text-red">{{ summary.total_money_withdrawn | inr }}</strong></div>
+      <div class="summary-row summary-highlight"><span>Net Balance Change</span><strong>{{ summary.net_balance_change | inr }}</strong></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <h3>Formatted ASCII Summary Slip</h3>
+        <p class="muted">Python string &amp; loop pattern output</p>
+      </div>
+    </div>
+    <pre class="receipt-slip">{{ summary_pattern }}</pre>
+
+    {% if summary.rejection_breakdown %}
+      <h4 class="slip-title" id="rej-caption">Rejection Reasons Breakdown</h4>
+      <div tabindex="0" role="region" aria-labelledby="rej-caption" class="table-wrapper">
+        <table class="data-table">
+          <caption class="visually-hidden">Breakdown of rejected transactions</caption>
+          <thead>
+            <tr>
+              <th>Reason</th>
+              <th>Count</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for reason, count in summary.rejection_breakdown %}
+              <tr>
+                <th>{{ reason }}</th>
+                <td><strong>{{ count }}</strong></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

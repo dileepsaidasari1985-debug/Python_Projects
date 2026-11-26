@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Banking Simulation Dashboard{% endblock %}
+{% block page_subtitle %}Live overview of simulated account DEMO1001, balances, limits, and SQLite ledger{% endblock %}
+
+{% block content %}
+<section class="hero-card">
+  <div class="hero-info">
+    <span class="badge-outline">EDUCATIONAL ATM SIMULATION • NO REAL BANKING</span>
+    <h2>{{ account.holder_name }}</h2>
+    <p class="hero-acct">Simulated Account Number: <strong class="mono">{{ account.account_number }}</strong></p>
+    <p class="hero-note">Opening Balance: {{ account.initial_balance | inr }} &bull; Updated: {{ account.updated_at }}</p>
+  </div>
+  <div class="hero-balance-box">
+    <span class="balance-label">Current Simulated Balance</span>
+    <div class="balance-amount">{{ account.current_balance | inr }}</div>
+    <div class="hero-actions">
+      <a href="{{ url_for('deposit') }}" class="btn btn-success">Deposit Cash</a>
+      <a href="{{ url_for('withdrawal') }}" class="btn btn-danger">Withdraw Cash</a>
+      <a href="{{ url_for('atm_menu') }}" class="btn btn-secondary">ATM Menu</a>
+    </div>
+  </div>
+</section>
+
+<section class="stats-grid" aria-label="Account transaction statistics">
+  <article class="stat-card stat-green">
+    <div class="stat-header">
+      <span>Total Deposits</span>
+      <span class="stat-pill pill-green">{{ summary.total_deposits_count }} txns</span>
+    </div>
+    <div class="stat-value">{{ summary.total_money_deposited | inr }}</div>
+    <p class="stat-foot">Largest deposit: {{ summary.largest_deposit | inr }}</p>
+  </article>
+
+  <article class="stat-card stat-red">
+    <div class="stat-header">
+      <span>Total Withdrawals</span>
+      <span class="stat-pill pill-red">{{ summary.total_withdrawals_count }} txns</span>
+    </div>
+    <div class="stat-value">{{ summary.total_money_withdrawn | inr }}</div>
+    <p class="stat-foot">Largest withdrawal: {{ summary.largest_withdrawal | inr }}</p>
+  </article>
+
+  <article class="stat-card stat-blue">
+    <div class="stat-header">
+      <span>Successful Transactions</span>
+      <span class="stat-pill pill-blue">Valid</span>
+    </div>
+    <div class="stat-value">{{ summary.total_successful }}</div>
+    <p class="stat-foot">Avg successful txn: {{ summary.average_transaction_amount | inr }}</p>
+  </article>
+
+  <article class="stat-card stat-slate">
+    <div class="stat-header">
+      <span>Rejected Transactions</span>
+      <span class="stat-pill pill-red">Blocked</span>
+    </div>
+    <div class="stat-value">{{ summary.total_rejected }}</div>
+    <p class="stat-foot">Total attempts logged: {{ summary.total_transactions }}</p>
+  </article>
+</section>
+
+<div class="dashboard-grid">
+  <!-- Activity Chart & Daily Limit Card -->
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <h3>Transaction Activity Chart</h3>
+        <p class="muted">Recent up to 12 transactions (green = deposit, red = withdrawal, dashed = rejected)</p>
+      </div>
+      <a href="{{ url_for('reports') }}" class="btn btn-ghost btn-sm">Full Report</a>
+    </div>
+
+    {% if summary.chart_bars %}
+      <div class="activity-chart" role="img" aria-label="Bar chart of recent ATM transactions">
+        {% for bar in summary.chart_bars %}
+          <div class="chart-col" title="{{ bar.id }}: {{ bar.type }} {{ bar.amount | inr }} ({{ bar.status }})">
+            <span class="chart-amt">{{ bar.amount | inr }}</span>
+            <div class="chart-track">
+              <div class="chart-bar {% if bar.type == 'DEPOSIT' %}bar-deposit{% else %}bar-withdraw{% endif %} {% if bar.status == 'REJECTED' %}bar-rejected{% endif %}"
+                   style="height: {{ bar.height_pct }}%;"></div>
+            </div>
+            <span class="chart-label">{{ 'DEP' if bar.type == 'DEPOSIT' else 'W/D' }}</span>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-box">
+        <p>No transactions recorded yet in SQLite.</p>
+        <form action="{{ url_for('simulate_sample') }}" method="POST">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-primary">Run Sample Case Study #13 Sequence</button>
+        </form>
+      </div>
+    {% endif %}
+
+    <div class="limit-meter">
+      <div class="limit-meter-head">
+        <span>Today's Withdrawal Limit Usage</span>
+        <strong>{{ daily_withdrawn | inr }} / {{ atm_settings.max_daily_withdrawal | inr }}</strong>
+      </div>
+      <div class="progress-track" aria-hidden="true">
+        <div class="progress-fill" style="width: {{ daily_pct }}%;"></div>
+      </div>
+      <p class="muted small">Remaining daily allowance: <strong>{{ remaining_daily | inr }}</strong> &bull; Max per txn: {{ atm_settings.max_per_transaction | inr }}</p>
+    </div>
+  </section>
+
+  <!-- Deposit vs Withdrawal Summary + Quick Actions -->
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <h3>Deposit &amp; Withdrawal Summary</h3>
+        <p class="muted">Calculated dynamically by Python from SQLite records</p>
+      </div>
+    </div>
+
+    <div class="summary-list">
+      <div class="summary-row">
+        <span>Opening Balance</span>
+        <strong>{{ summary.opening_balance | inr }}</strong>
+      </div>
+      <div class="summary-row">
+        <span>Total Money Deposited</span>
+        <strong class="text-green">+{{ summary.total_money_deposited | inr }}</strong>
+      </div>
+      <div class="summary-row">
+        <span>Total Money Withdrawn</span>
+        <strong class="text-red">-{{ summary.total_money_withdrawn | inr }}</strong>
+      </div>
+      <div class="summary-row summary-highlight">
+        <span>Net Balance Change</span>
+        <strong class="{% if summary.net_balance_change >= 0 %}text-green{% else %}text-red{% endif %}">
+          {% if summary.net_balance_change >= 0 %}+{% endif %}{{ summary.net_balance_change | inr }}
+        </strong>
+      </div>
+      <div class="summary-row">
+        <span>Closing / Current Balance</span>
+        <strong>{{ summary.closing_balance | inr }}</strong>
+      </div>
+    </div>
+
+    <div class="quick-actions-grid">
+      <a href="{{ url_for('transaction_sequence') }}" class="quick-tile">
+        <strong>Sequence Simulator</strong>
+        <span>Run multi-step ATM batch</span>
+      </a>
+      <a href="{{ url_for('balance_inquiry') }}" class="quick-tile">
+        <strong>Balance Inquiry</strong>
+        <span>View live account slip</span>
+      </a>
+      <a href="{{ url_for('export_csv') }}" class="quick-tile">
+        <strong>Export CSV</strong>
+        <span>Download ledger report</span>
+      </a>
+      <a href="{{ url_for('settings') }}" class="quick-tile">
+        <strong>ATM Rules</strong>
+        <span>Configure limits &amp; reset</span>
+      </a>
+    </div>
+  </section>
+</div>
+
+<section class="card">
+  <div class="card-header">
+    <div>
+      <h3 id="recent-txns-caption">Recent Transactions</h3>
+      <p class="muted">Latest entries persisted in SQLite database</p>
+    </div>
+    <div class="header-actions">
+      <form action="{{ url_for('simulate_sample') }}" method="POST" class="inline-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-secondary btn-sm">Run Sample Sequence</button>
+      </form>
+      <a href="{{ url_for('transaction_history') }}" class="btn btn-primary btn-sm">View All History</a>
+    </div>
+  </div>
+
+  {% if recent_transactions %}
+    <div tabindex="0" role="region" aria-labelledby="recent-txns-caption" class="table-wrapper">
+      <table class="data-table">
+        <caption class="visually-hidden">Recent ATM transactions</caption>
+        <thead>
+          <tr>
+            <th>Transaction ID</th>
+            <th>Date &amp; Time</th>
+            <th>Type</th>
+            <th>Amount</th>
+            <th>Balance After</th>
+            <th>Status</th>
+            <th>Description / Reason</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for txn in recent_transactions %}
+            <tr>
+              <th><a href="{{ url_for('transaction_details', transaction_id=txn.transaction_id) }}" class="mono link-primary">{{ txn.transaction_id }}</a></th>
+              <td>{{ txn.created_at }}</td>
+              <td><span class="type-badge type-{{ txn.transaction_type | lower }}">{{ txn.transaction_type }}</span></td>
+              <td class="mono {% if txn.transaction_type == 'DEPOSIT' %}text-green{% else %}text-red{% endif %}">{{ txn.amount | inr }}</td>
+              <td class="mono">{{ txn.balance_after | inr }}</td>
+              <td><span class="status-badge status-{{ txn.status | lower }}">{{ txn.status }}</span></td>
+              <td>
+                <div>{{ txn.description }}</div>
+                {% if txn.rejection_reason %}
+                  <div class="text-red small">{{ txn.rejection_reason }}</div>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="muted">No transactions found yet. Make a deposit, withdrawal, or run the sample transaction sequence.</p>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Balance Inquiry{% endblock %}
+{% block page_title %}Balance Inquiry{% endblock %}
+{% block page_subtitle %}Live simulated account balance and summary for DEMO1001{% endblock %}
+
+{% block content %}
+<section class="balance-card-premium">
+  <div class="balance-card-top">
+    <div>
+      <span class="badge-outline">SIMULATED EDUCATIONAL ACCOUNT</span>
+      <h2>{{ account.holder_name }}</h2>
+      <p class="mono">Account Number: <strong>{{ account.account_number }}</strong></p>
+    </div>
+    <div class="balance-card-chip" aria-hidden="true">ATM</div>
+  </div>
+
+  <div class="balance-card-amount">
+    <span>Current Simulated Balance</span>
+    <strong>{{ account.current_balance | inr }}</strong>
+  </div>
+
+  <div class="balance-card-meta">
+    <div>
+      <span>Total Deposits</span>
+      <strong class="text-green-light">{{ summary.total_money_deposited | inr }} ({{ summary.total_deposits_count }})</strong>
+    </div>
+    <div>
+      <span>Total Withdrawals</span>
+      <strong class="text-red-light">{{ summary.total_money_withdrawn | inr }} ({{ summary.total_withdrawals_count }})</strong>
+    </div>
+    <div>
+      <span>Today's Remaining Limit</span>
+      <strong>{{ remaining_daily | inr }}</strong>
+    </div>
+    <div>
+      <span>Last Transaction Date</span>
+      <strong>{{ last_txn_date or 'No transactions yet' }}</strong>
+    </div>
+  </div>
+</section>
+
+<div class="two-col-layout">
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <h3>Account Summary Breakdown</h3>
+        <p class="muted">Computed directly from SQLite ledger records</p>
+      </div>
+    </div>
+    <div class="summary-list">
+      <div class="summary-row"><span>Opening Balance</span><strong>{{ summary.opening_balance | inr }}</strong></div>
+      <div class="summary-row"><span>Current Balance</span><strong>{{ account.current_balance | inr }}</strong></div>
+      <div class="summary-row"><span>Net Balance Change</span><strong>{{ summary.net_balance_change | inr }}</strong></div>
+      <div class="summary-row"><span>Successful Transactions</span><strong>{{ summary.total_successful }}</strong></div>
+      <div class="summary-row"><span>Rejected Attempts</span><strong>{{ summary.total_rejected }}</strong></div>
+      <div class="summary-row"><span>Daily Withdrawn Today</span><strong>{{ daily_withdrawn | inr }} / {{ atm_settings.max_daily_withdrawal | inr }}</strong></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <h3>Quick Actions</h3>
+        <p class="muted">Continue your ATM simulation session</p>
+      </div>
+    </div>
+    <div class="quick-actions-grid">
+      <a href="{{ url_for('deposit') }}" class="quick-tile">
+        <strong>Deposit Cash</strong>
+        <span>Add funds to balance</span>
+      </a>
+      <a href="{{ url_for('withdrawal') }}" class="quick-tile">
+        <strong>Withdraw Cash</strong>
+        <span>Test withdrawal limits</span>
+      </a>
+      <a href="{{ url_for('transaction_sequence') }}" class="quick-tile">
+        <strong>Sequence Simulator</strong>
+        <span>Run multi-step loop</span>
+      </a>
+      <a href="{{ url_for('atm_menu') }}" class="quick-tile">
+        <strong>ATM Terminal Menu</strong>
+        <span>Return to main ATM screen</span>
+      </a>
+    </div>
+  </section>
+</div>
+{% endblock %}
