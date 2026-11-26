@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}University Scholarship Allocation System{% endblock %}</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/university_crest.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <!-- Mobile Slide-Over Navigation Drawer (native <dialog> top-layer) -->
+  <dialog class="Drawer" id="mobile-drawer" aria-label="Mobile navigation menu">
+    <div class="Drawer-scroller">
+      <nav class="Drawer-sheet" aria-label="Mobile Navigation">
+        <div class="drawer-header">
+          <div class="brand-lockup">
+            <img src="{{ url_for('static', filename='images/university_crest.svg') }}" alt="" width="36" height="36">
+            <div>
+              <span class="brand-title">ScholarFlow</span>
+              <span class="brand-sub">University Portal</span>
+            </div>
+          </div>
+          <button type="button" id="drawer-close" class="icon-btn" aria-label="Close navigation menu" autofocus>
+            ✕
+          </button>
+        </div>
+
+        <ul class="nav-list">
+          <li><a href="{{ url_for('dashboard') }}" class="nav-link {% if active_page == 'dashboard' %}is-active{% endif %}" {% if active_page == 'dashboard' %}aria-current="page"{% endif %}>Dashboard</a></li>
+          <li><a href="{{ url_for('add_student_view') }}" class="nav-link {% if active_page == 'add_student' %}is-active{% endif %}" {% if active_page == 'add_student' %}aria-current="page"{% endif %}>Add Application</a></li>
+          <li><a href="{{ url_for('applicants') }}" class="nav-link {% if active_page == 'applicants' %}is-active{% endif %}" {% if active_page == 'applicants' %}aria-current="page"{% endif %}>Applicants</a></li>
+          <li><a href="{{ url_for('rankings') }}" class="nav-link {% if active_page == 'rankings' %}is-active{% endif %}" {% if active_page == 'rankings' %}aria-current="page"{% endif %}>Rankings &amp; Allocation</a></li>
+          <li><a href="{{ url_for('rules_view') }}" class="nav-link {% if active_page == 'rules' %}is-active{% endif %}" {% if active_page == 'rules' %}aria-current="page"{% endif %}>Scholarship Rules</a></li>
+          <li><a href="{{ url_for('reports') }}" class="nav-link {% if active_page == 'reports' %}is-active{% endif %}" {% if active_page == 'reports' %}aria-current="page"{% endif %}>Reports &amp; CSV</a></li>
+        </ul>
+
+        <div class="sidebar-footer">
+          <p class="sidebar-meta">Case Study #1 • Python ABL</p>
+          <p class="sidebar-meta">Merit &amp; Income Ranking Engine</p>
+        </div>
+      </nav>
+    </div>
+  </dialog>
+
+  <div class="app-shell">
+    <!-- Persistent Desktop Sidebar -->
+    <aside class="sidebar" aria-label="Primary Navigation">
+      <div class="sidebar-brand">
+        <img src="{{ url_for('static', filename='images/university_crest.svg') }}" alt="University Crest" width="42" height="42">
+        <div>
+          <span class="brand-title">ScholarFlow</span>
+          <span class="brand-sub">Allocation System</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav" aria-label="Main Menu">
+        <ul class="nav-list">
+          <li>
+            <a href="{{ url_for('dashboard') }}" class="nav-link {% if active_page == 'dashboard' %}is-active{% endif %}" {% if active_page == 'dashboard' %}aria-current="page"{% endif %}>
+              <span class="nav-icon" aria-hidden="true">◫</span>
+              <span>Dashboard</span>
+            </a>
+          </li>
+          <li>
+            <a href="{{ url_for('add_student_view') }}" class="nav-link {% if active_page == 'add_student' %}is-active{% endif %}" {% if active_page == 'add_student' %}aria-current="page"{% endif %}>
+              <span class="nav-icon" aria-hidden="true">＋</span>
+              <span>Add Application</span>
+            </a>
+          </li>
+          <li>
+            <a href="{{ url_for('applicants') }}" class="nav-link {% if active_page == 'applicants' %}is-active{% endif %}" {% if active_page == 'applicants' %}aria-current="page"{% endif %}>
+              <span class="nav-icon" aria-hidden="true">☰</span>
+              <span>Applicants</span>
+            </a>
+          </li>
+          <li>
+            <a href="{{ url_for('rankings') }}" class="nav-link {% if active_page == 'rankings' %}is-active{% endif %}" {% if active_page == 'rankings' %}aria-current="page"{% endif %}>
+              <span class="nav-icon" aria-hidden="true">★</span>
+              <span>Rankings &amp; Allocation</span>
+            </a>
+          </li>
+          <li>
+            <a href="{{ url_for('rules_view') }}" class="nav-link {% if active_page == 'rules' %}is-active{% endif %}" {% if active_page == 'rules' %}aria-current="page"{% endif %}>
+              <span class="nav-icon" aria-hidden="true">⚙</span>
+              <span>Scholarship Rules</span>
+            </a>
+          </li>
+          <li>
+            <a href="{{ url_for('reports') }}" class="nav-link {% if active_page == 'reports' %}is-active{% endif %}" {% if active_page == 'reports' %}aria-current="page"{% endif %}>
+              <span class="nav-icon" aria-hidden="true">▤</span>
+              <span>Reports &amp; CSV</span>
+            </a>
+          </li>
+        </ul>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="gold-pill">Academic Session 2026–27</div>
+        <p class="sidebar-meta">Case Study #1 • Python + SQLite</p>
+      </div>
+    </aside>
+
+    <div class="main-column">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button type="button" id="drawer-open" class="mobile-menu-btn" aria-label="Open navigation menu" aria-expanded="false" aria-controls="mobile-drawer">
+            <span aria-hidden="true">☰</span>
+            <span>Menu</span>
+          </button>
+          <div>
+            <p class="topbar-kicker">University Scholarship Committee</p>
+            <h1 class="page-heading">{% block page_title %}Dashboard{% endblock %}</h1>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          {% block topbar_actions %}
+          <a href="{{ url_for('add_student_view') }}" class="btn btn-primary">+ New Application</a>
+          {% endblock %}
+        </div>
+      </header>
+
+      <main id="main-content" class="content-area">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class="flash-stack" role="status" aria-live="polite">
+              {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">
+                  <span>{{ message }}</span>
+                  <button type="button" class="alert-close" aria-label="Dismiss message">✕</button>
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+
+  <!-- Shared Modal Confirmation Dialog for Destructive Actions -->
+  <dialog id="confirm-delete-dialog" class="modal-dialog" aria-labelledby="delete-dialog-title">
+    <div class="modal-card">
+      <h1 id="delete-dialog-title" class="modal-title">Delete Student Application?</h1>
+      <p id="delete-dialog-message" class="modal-body">
+        Are you sure you want to permanently remove this student record? This action updates the SQLite database and recalculates rankings.
+      </p>
+      <form id="delete-confirm-form" method="POST" action="" class="modal-actions">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="button" id="delete-cancel-btn" class="btn btn-secondary" autofocus>Cancel</button>
+        <button type="submit" class="btn btn-danger">Delete Application</button>
+      </form>
+    </div>
+  </dialog>
+
+  <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

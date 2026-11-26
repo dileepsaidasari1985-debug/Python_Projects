@@ -1,0 +1,341 @@
+{% extends "base.html" %}
+{% block title %}{% if mode == 'edit' %}Edit Application{% else %}Add Student Application{% endif %} | Scholarship System{% endblock %}
+{% block page_title %}{% if mode == 'edit' %}Edit Student Application{% else %}New Student Application{% endif %}{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('applicants') }}" class="btn btn-secondary">Back to Applicants</a>
+{% endblock %}
+
+{% block content %}
+{% if errors %}
+  <div class="alert alert-error error-summary" role="alert" tabindex="-1">
+    <div>
+      <strong>Please correct the following validation errors:</strong>
+      <ul class="error-list">
+        {% for err in errors %}
+          <li>{{ err }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+{% endif %}
+
+<div class="form-layout">
+  <form
+    method="POST"
+    action="{% if mode == 'edit' %}{{ url_for('edit_student_view', student_id=original_student_id) }}{% else %}{{ url_for('add_student_view') }}{% endif %}"
+    class="panel application-form"
+    id="student-application-form"
+    data-min-agg="{{ rules.min_aggregate }}"
+    data-min-sub="{{ rules.min_subject_marks }}"
+    data-min-att="{{ rules.min_attendance }}"
+    data-max-inc="{{ rules.max_family_income }}"
+    data-cert-req="{{ rules.income_certificate_required }}"
+    data-w-agg="{{ rules.weight_aggregate }}"
+    data-w-att="{{ rules.weight_attendance }}"
+    data-w-inc="{{ rules.weight_income }}"
+    data-s1-lim="{{ rules.slab1_limit }}"
+    data-s1-pts="{{ rules.slab1_points }}"
+    data-s2-lim="{{ rules.slab2_limit }}"
+    data-s2-pts="{{ rules.slab2_points }}"
+    data-s3-lim="{{ rules.slab3_limit }}"
+    data-s3-pts="{{ rules.slab3_points }}"
+    data-s4-lim="{{ rules.slab4_limit }}"
+    data-s4-pts="{{ rules.slab4_points }}"
+    data-s-above="{{ rules.slab_above_points }}"
+  >
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+    <fieldset class="form-section">
+      <legend>1. Student Information</legend>
+      <div class="form-grid">
+        <div class="field">
+          <label for="student_id">Student ID <span aria-hidden="true">*</span></label>
+          <span id="student_id-hint" class="hint">Unique ID, 3–20 letters/numbers/hyphens/underscores (e.g., STU2026019).</span>
+          <input
+            type="text"
+            id="student_id"
+            name="student_id"
+            value="{{ form_values.get('student_id', '') }}"
+            required
+            minlength="3"
+            maxlength="20"
+            pattern="[A-Za-z0-9_-]{3,20}"
+            autocorrect="off"
+            autocapitalize="characters"
+            spellcheck="false"
+            aria-describedby="student_id-hint"
+            data-error="student_id-error"
+          >
+          <div id="student_id-error" class="error-msg">
+            <span role="img" aria-label="Error">⚠</span> Enter 3–20 letters, numbers, hyphens, or underscores (no spaces).
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="full_name">Full Name <span aria-hidden="true">*</span></label>
+          <span id="full_name-hint" class="hint">Enter student's complete legal name.</span>
+          <input
+            type="text"
+            id="full_name"
+            name="full_name"
+            value="{{ form_values.get('full_name', '') }}"
+            required
+            minlength="2"
+            maxlength="100"
+            autocomplete="name"
+            aria-describedby="full_name-hint"
+            data-error="full_name-error"
+          >
+          <div id="full_name-error" class="error-msg">
+            <span role="img" aria-label="Error">⚠</span> Please enter the student's full name (at least 2 characters).
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="age">Age <span aria-hidden="true">*</span></label>
+          <span id="age-hint" class="hint">Whole number between 15 and 60.</span>
+          <input
+            type="number"
+            id="age"
+            name="age"
+            value="{{ form_values.get('age', '') }}"
+            required
+            min="15"
+            max="60"
+            step="1"
+            inputmode="numeric"
+            aria-describedby="age-hint"
+            data-error="age-error"
+          >
+          <div id="age-error" class="error-msg">
+            <span role="img" aria-label="Error">⚠</span> Age must be a whole number from 15 to 60.
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="gender">Gender (Optional)</label>
+          <span id="gender-hint" class="hint">Optional demographic field.</span>
+          <select id="gender" name="gender" aria-describedby="gender-hint">
+            <option value="">-- Select (Optional) --</option>
+            {% for g in ['Female', 'Male', 'Non-Binary', 'Prefer not to say'] %}
+              <option value="{{ g }}" {% if form_values.get('gender') == g %}selected{% endif %}>{{ g }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="department">Department <span aria-hidden="true">*</span></label>
+          <select id="department" name="department" required data-error="department-error">
+            <option value="">-- Select Department --</option>
+            {% for dept in departments %}
+              <option value="{{ dept }}" {% if form_values.get('department') == dept %}selected{% endif %}>{{ dept }}</option>
+            {% endfor %}
+          </select>
+          <div id="department-error" class="error-msg">
+            <span role="img" aria-label="Error">⚠</span> Please select a department.
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="academic_year">Academic Year <span aria-hidden="true">*</span></label>
+          <select id="academic_year" name="academic_year" required data-error="year-error">
+            <option value="">-- Select Year --</option>
+            {% for yr in academic_years %}
+              <option value="{{ yr }}" {% if form_values.get('academic_year') == yr %}selected{% endif %}>{{ yr }}</option>
+            {% endfor %}
+          </select>
+          <div id="year-error" class="error-msg">
+            <span role="img" aria-label="Error">⚠</span> Please select an academic year.
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="phone">Phone Number (Optional)</label>
+          <span id="phone-hint" class="hint">7–15 digits if provided.</span>
+          <input
+            type="tel"
+            id="phone"
+            name="phone"
+            value="{{ form_values.get('phone', '') }}"
+            autocomplete="tel"
+            inputmode="tel"
+            aria-describedby="phone-hint"
+            data-error="phone-error"
+          >
+          <div id="phone-error" class="error-msg">
+            <span role="img" aria-label="Error">⚠</span> Please enter a valid phone number.
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="email">Email Address (Optional)</label>
+          <span id="email-hint" class="hint">Format: student@university.edu</span>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            value="{{ form_values.get('email', '') }}"
+            autocomplete="email"
+            autocorrect="off"
+            autocapitalize="none"
+            spellcheck="false"
+            aria-describedby="email-hint"
+            data-error="email-error"
+          >
+          <div id="email-error" class="error-msg">
+            <span role="img" aria-label="Error">⚠</span> Enter an email address in the format name@domain.com.
+          </div>
+        </div>
+      </div>
+    </fieldset>
+
+    <fieldset class="form-section">
+      <legend>2. Academic Information (Marks 0–100 &amp; Attendance)</legend>
+      <div class="form-grid form-grid-3">
+        {% for field_key, subject_label in subject_tuple %}
+          <div class="field">
+            <label for="{{ field_key }}">{{ subject_label }} <span aria-hidden="true">*</span></label>
+            <span id="{{ field_key }}-hint" class="hint">Min required: {{ "%.0f"|format(rules.min_subject_marks) }} / 100</span>
+            <input
+              type="number"
+              id="{{ field_key }}"
+              name="{{ field_key }}"
+              class="calc-input mark-input"
+              value="{{ form_values.get(field_key, '') }}"
+              required
+              min="0"
+              max="100"
+              step="0.01"
+              inputmode="decimal"
+              aria-describedby="{{ field_key }}-hint"
+              data-error="{{ field_key }}-error"
+            >
+            <div id="{{ field_key }}-error" class="error-msg">
+              <span role="img" aria-label="Error">⚠</span> {{ subject_label }} marks must be between 0 and 100.
+            </div>
+          </div>
+        {% endfor %}
+
+        <div class="field">
+          <label for="attendance_percentage">Attendance (%) <span aria-hidden="true">*</span></label>
+          <span id="attendance-hint" class="hint">Min required: {{ "%.1f"|format(rules.min_attendance) }}%</span>
+          <input
+            type="number"
+            id="attendance_percentage"
+            name="attendance_percentage"
+            class="calc-input"
+            value="{{ form_values.get('attendance_percentage', '') }}"
+            required
+            min="0"
+            max="100"
+            step="0.01"
+            inputmode="decimal"
+            aria-describedby="attendance-hint"
+            data-error="attendance-error"
+          >
+          <div id="attendance-error" class="error-msg">
+            <span role="img" aria-label="Error">⚠</span> Attendance must be between 0 and 100.
+          </div>
+        </div>
+      </div>
+    </fieldset>
+
+    <fieldset class="form-section">
+      <legend>3. Financial &amp; Scholarship Details</legend>
+      <div class="form-grid">
+        <div class="field">
+          <label for="annual_income">Annual Family Income (₹) <span aria-hidden="true">*</span></label>
+          <span id="income-hint" class="hint">Must be ≥ 0. Eligibility cap: {{ format_inr(rules.max_family_income) }}.</span>
+          <input
+            type="number"
+            id="annual_income"
+            name="annual_income"
+            class="calc-input"
+            value="{{ form_values.get('annual_income', '') }}"
+            required
+            min="0"
+            step="any"
+            inputmode="numeric"
+            aria-describedby="income-hint"
+            data-error="income-error"
+          >
+          <div id="income-error" class="error-msg">
+            <span role="img" aria-label="Error">⚠</span> Annual family income cannot be negative.
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="income_certificate_status">Income Certificate Status <span aria-hidden="true">*</span></label>
+          <span id="cert-hint" class="hint">{% if rules.income_certificate_required %}Required by current scholarship rules.{% else %}Currently optional in rules.{% endif %}</span>
+          <select id="income_certificate_status" name="income_certificate_status" class="calc-input" required aria-describedby="cert-hint">
+            <option value="Available" {% if form_values.get('income_certificate_status', 'Available') == 'Available' %}selected{% endif %}>Available (Verified / Submitted)</option>
+            <option value="Missing" {% if form_values.get('income_certificate_status') == 'Missing' %}selected{% endif %}>Missing (Not Submitted)</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="scholarship_category">Scholarship Category <span aria-hidden="true">*</span></label>
+          <select id="scholarship_category" name="scholarship_category" required>
+            {% for cat in scholarship_categories %}
+              <option value="{{ cat }}" {% if form_values.get('scholarship_category', 'Merit-cum-Means') == cat %}selected{% endif %}>{{ cat }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="application_date">Application Date <span aria-hidden="true">*</span></label>
+          <input
+            type="date"
+            id="application_date"
+            name="application_date"
+            value="{{ form_values.get('application_date', '') }}"
+            required
+          >
+        </div>
+      </div>
+    </fieldset>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">
+        {% if mode == 'edit' %}Save Changes &amp; Recalculate{% else %}Submit Application &amp; Evaluate{% endif %}
+      </button>
+      <a href="{{ url_for('applicants') }}" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+
+  <!-- Live Calculation Preview Panel -->
+  <aside class="panel preview-panel" aria-labelledby="preview-heading">
+    <h2 id="preview-heading" class="panel-title">Live Calculation Preview</h2>
+    <p class="panel-subtitle">Authoritative evaluation happens in Python on submit.</p>
+
+    <dl class="preview-metrics">
+      <div class="preview-row">
+        <dt>Total Marks</dt>
+        <dd id="preview-total" class="tabular">0.00 / 500</dd>
+      </div>
+      <div class="preview-row">
+        <dt>Aggregate Percentage</dt>
+        <dd id="preview-aggregate" class="tabular">0.00%</dd>
+      </div>
+      <div class="preview-row">
+        <dt>Income Merit Score</dt>
+        <dd id="preview-income-merit" class="tabular">—</dd>
+      </div>
+      <div class="preview-row">
+        <dt>Projected Scholarship Score</dt>
+        <dd id="preview-score" class="tabular preview-score-val">—</dd>
+      </div>
+      <div class="preview-row">
+        <dt>Projected Eligibility</dt>
+        <dd id="preview-eligibility"><span class="badge badge-neutral">Enter marks &amp; income</span></dd>
+      </div>
+    </dl>
+
+    <div id="preview-reasons-box" class="preview-reasons" hidden>
+      <strong>Check items:</strong>
+      <ul id="preview-reasons-list"></ul>
+    </div>
+  </aside>
+</div>
+{% endblock %}

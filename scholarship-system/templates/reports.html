@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block title %}Reports &amp; CSV Export | University Scholarship System{% endblock %}
+{% block page_title %}Scholarship Allocation Report{% endblock %}
+
+{% block topbar_actions %}
+  <button type="button" id="print-report-btn" class="btn btn-secondary">Print Report</button>
+  <a href="{{ url_for('export_csv') }}" class="btn btn-primary">Download CSV Report</a>
+{% endblock %}
+
+{% block content %}
+<div class="print-header">
+  <h2>University Scholarship Allocation Committee — Official Summary Report</h2>
+  <p>Generated on {{ generated_date }} | Quota: {{ rules.scholarship_quota }} Scholarships | Min Aggregate: {{ "%.1f"|format(rules.min_aggregate) }}% | Min Attendance: {{ "%.1f"|format(rules.min_attendance) }}% | Max Income: {{ format_inr(rules.max_family_income) }}</p>
+</div>
+
+<section class="stats-grid" aria-label="Report Statistics">
+  <article class="stat-card">
+    <p class="stat-label">Total Applicants</p>
+    <p class="stat-value tabular">{{ summary.total_applicants }}</p>
+  </article>
+  <article class="stat-card stat-success">
+    <p class="stat-label">Eligible Students</p>
+    <p class="stat-value tabular">{{ summary.eligible_count }}</p>
+  </article>
+  <article class="stat-card stat-danger">
+    <p class="stat-label">Rejected Students</p>
+    <p class="stat-value tabular">{{ summary.rejected_count }}</p>
+  </article>
+  <article class="stat-card stat-gold">
+    <p class="stat-label">Selected Recipients</p>
+    <p class="stat-value tabular">{{ summary.scholarships_allocated }}</p>
+  </article>
+  <article class="stat-card">
+    <p class="stat-label">Waitlisted Students</p>
+    <p class="stat-value tabular">{{ summary.waitlisted_count }}</p>
+  </article>
+  <article class="stat-card">
+    <p class="stat-label">Average Aggregate</p>
+    <p class="stat-value tabular">{{ "%.2f"|format(summary.average_marks) }}%</p>
+  </article>
+  <article class="stat-card stat-primary">
+    <p class="stat-label">Highest Score</p>
+    <p class="stat-value tabular">{{ "%.2f"|format(summary.highest_score) }}</p>
+  </article>
+  <article class="stat-card">
+    <p class="stat-label">Remaining Quota</p>
+    <p class="stat-value tabular">{{ summary.remaining_seats }}</p>
+  </article>
+</section>
+
+<!-- Department-wise Breakdown (Nested List Summary) -->
+<section class="panel" aria-labelledby="dept-table-caption">
+  <div class="panel-header">
+    <div>
+      <h2 id="dept-table-caption" class="panel-title">Department-Wise Applicant &amp; Eligibility Breakdown</h2>
+      <p class="panel-subtitle">Aggregated using Python nested lists across all departments</p>
+    </div>
+  </div>
+
+  {% if department_table %}
+    <div tabindex="0" role="region" aria-labelledby="dept-table-caption" class="table-wrapper">
+      <table class="data-table" style="--label-2: 'Total Applicants'; --label-3: 'Eligible'; --label-4: 'Selected'; --label-5: 'Avg Aggregate';">
+        <caption class="visually-hidden">Department-wise Breakdown</caption>
+        <thead>
+          <tr>
+            <th scope="col">Department</th>
+            <th scope="col">Total Applicants</th>
+            <th scope="col">Eligible Count</th>
+            <th scope="col">Selected Recipients</th>
+            <th scope="col">Average Aggregate</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for dept_row in department_table %}
+            <tr>
+              <th scope="row">{{ dept_row[0] }}</th>
+              <td class="tabular">{{ dept_row[1] }}</td>
+              <td class="tabular">{{ dept_row[2] }}</td>
+              <td class="tabular">{{ dept_row[3] }}</td>
+              <td class="tabular">{{ "%.2f"|format(dept_row[4]) }}%</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty-state"><p>No department records available.</p></div>
+  {% endif %}
+</section>
+
+<!-- Selected Recipients List -->
+<section class="panel" aria-labelledby="selected-report-caption">
+  <div class="panel-header">
+    <div>
+      <h2 id="selected-report-caption" class="panel-title">Selected Scholarship Recipients ({{ selected_students|length }})</h2>
+      <p class="panel-subtitle">Final merit list awarded scholarships under current quota</p>
+    </div>
+  </div>
+
+  {% if selected_students %}
+    <div tabindex="0" role="region" aria-labelledby="selected-report-caption" class="table-wrapper">
+      <table class="data-table" style="--label-2: 'Rank'; --label-3: 'Student ID'; --label-4: 'Department'; --label-5: 'Aggregate'; --label-6: 'Attendance'; --label-7: 'Income'; --label-8: 'Score';">
+        <caption class="visually-hidden">Selected Scholarship Recipients</caption>
+        <thead>
+          <tr>
+            <th scope="col">Recipient Name</th>
+            <th scope="col">Rank</th>
+            <th scope="col">Student ID</th>
+            <th scope="col">Department</th>
+            <th scope="col">Aggregate</th>
+            <th scope="col">Attendance</th>
+            <th scope="col">Family Income</th>
+            <th scope="col">Score</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in selected_students %}
+            <tr>
+              <th scope="row">{{ s.full_name }}</th>
+              <td class="tabular">#{{ s.rank }}</td>
+              <td class="tabular">{{ s.student_id }}</td>
+              <td>{{ s.department }}</td>
+              <td class="tabular">{{ "%.2f"|format(s.aggregate_percentage) }}%</td>
+              <td class="tabular">{{ "%.2f"|format(s.attendance_percentage) }}%</td>
+              <td class="tabular">{{ format_inr(s.annual_income) }}</td>
+              <td class="tabular"><strong>{{ "%.2f"|format(s.scholarship_score) }}</strong></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty-state"><p>No selected scholarship recipients.</p></div>
+  {% endif %}
+</section>
+
+<!-- Waiting-list & Rejected Summary -->
+<div class="dashboard-split">
+  <section class="panel" aria-labelledby="waitlist-report-heading">
+    <h2 id="waitlist-report-heading" class="panel-title">Waiting-List Students ({{ waitlisted_students|length }})</h2>
+    {% if waitlisted_students %}
+      <ul class="compact-list">
+        {% for s in waitlisted_students %}
+          <li>
+            <strong>#{{ s.rank }} {{ s.full_name }}</strong> ({{ s.student_id }}) — Score: <span class="tabular">{{ "%.2f"|format(s.scholarship_score) }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted-meta">No waitlisted students.</p>
+    {% endif %}
+  </section>
+
+  <section class="panel" aria-labelledby="rejected-report-heading">
+    <h2 id="rejected-report-heading" class="panel-title">Rejected Summary ({{ rejected_students|length }})</h2>
+    {% if rejected_students %}
+      <ul class="compact-list">
+        {% for s in rejected_students %}
+          <li>
+            <strong>{{ s.full_name }}</strong> ({{ s.student_id }}) — <span class="text-danger">{{ s.rejection_summary }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted-meta">No rejected students.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

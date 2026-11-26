@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block title %}Applicants Management | University Scholarship System{% endblock %}
+{% block page_title %}Applicant Management{% endblock %}
+
+{% block topbar_actions %}
+  {% if missing_sample_count > 0 %}
+    <form method="POST" action="{{ url_for('load_sample_data_view') }}" class="inline-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="next" value="applicants">
+      <button type="submit" class="btn btn-secondary">Load Sample Data ({{ missing_sample_count }})</button>
+    </form>
+  {% endif %}
+  <a href="{{ url_for('add_student_view') }}" class="btn btn-primary">+ Add Student</a>
+{% endblock %}
+
+{% block content %}
+<section class="panel" aria-label="Search and Filter Applicants">
+  <search>
+    <form method="GET" action="{{ url_for('applicants') }}" class="filter-bar">
+      <div class="field">
+        <label for="q">Search Name or ID</label>
+        <input type="search" id="q" name="q" value="{{ filters.q }}" placeholder="e.g., Aarav or STU2026001" autocorrect="off" spellcheck="false">
+      </div>
+
+      <div class="field">
+        <label for="department">Department</label>
+        <select id="department" name="department">
+          <option value="">All Departments</option>
+          {% for dept in departments %}
+            <option value="{{ dept }}" {% if filters.department == dept %}selected{% endif %}>{{ dept }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="eligibility">Eligibility</label>
+        <select id="eligibility" name="eligibility">
+          <option value="all" {% if filters.eligibility == 'all' %}selected{% endif %}>All</option>
+          <option value="eligible" {% if filters.eligibility == 'eligible' %}selected{% endif %}>Eligible Only</option>
+          <option value="rejected" {% if filters.eligibility == 'rejected' %}selected{% endif %}>Rejected Only</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="selection">Selection Status</label>
+        <select id="selection" name="selection">
+          <option value="all" {% if filters.selection == 'all' %}selected{% endif %}>All Statuses</option>
+          <option value="selected" {% if filters.selection == 'selected' %}selected{% endif %}>Eligible &amp; Selected</option>
+          <option value="waitlisted" {% if filters.selection == 'waitlisted' %}selected{% endif %}>Eligible (Waitlisted)</option>
+          <option value="rejected" {% if filters.selection == 'rejected' %}selected{% endif %}>Not Eligible</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="sort">Sort By</label>
+        <select id="sort" name="sort">
+          <option value="rank" {% if filters.sort == 'rank' %}selected{% endif %}>Scholarship Rank</option>
+          <option value="score_desc" {% if filters.sort == 'score_desc' %}selected{% endif %}>Scholarship Score (High → Low)</option>
+          <option value="score_asc" {% if filters.sort == 'score_asc' %}selected{% endif %}>Scholarship Score (Low → High)</option>
+          <option value="marks_desc" {% if filters.sort == 'marks_desc' %}selected{% endif %}>Aggregate Marks (High → Low)</option>
+          <option value="marks_asc" {% if filters.sort == 'marks_asc' %}selected{% endif %}>Aggregate Marks (Low → High)</option>
+          <option value="name_asc" {% if filters.sort == 'name_asc' %}selected{% endif %}>Name (A → Z)</option>
+          <option value="recent" {% if filters.sort == 'recent' %}selected{% endif %}>Most Recent</option>
+        </select>
+      </div>
+
+      <div class="filter-actions">
+        <button type="submit" class="btn btn-primary">Apply Filters</button>
+        <a href="{{ url_for('applicants') }}" class="btn btn-secondary">Reset</a>
+      </div>
+    </form>
+  </search>
+</section>
+
+<section class="panel" aria-labelledby="applicants-table-caption">
+  <div class="panel-header">
+    <div>
+      <h2 id="applicants-table-caption" class="panel-title">All Student Applications ({{ students|length }} of {{ total_count }})</h2>
+      <p class="panel-subtitle">Complete applicant registry synchronized with SQLite</p>
+    </div>
+    <a href="{{ url_for('export_csv') }}" class="btn btn-secondary btn-sm">Export CSV</a>
+  </div>
+
+  {% if students %}
+    <div tabindex="0" role="region" aria-labelledby="applicants-table-caption" class="table-wrapper">
+      <table class="data-table" style="--label-2: 'ID'; --label-3: 'Department'; --label-4: 'Aggregate'; --label-5: 'Attendance'; --label-6: 'Income'; --label-7: 'Score'; --label-8: 'Selection'; --label-9: 'Actions';">
+        <caption class="visually-hidden">Filtered Student Applications</caption>
+        <thead>
+          <tr>
+            <th scope="col">Student Name</th>
+            <th scope="col">Student ID</th>
+            <th scope="col">Department</th>
+            <th scope="col">Aggregate</th>
+            <th scope="col">Attendance</th>
+            <th scope="col">Family Income</th>
+            <th scope="col">Score</th>
+            <th scope="col">Selection Status</th>
+            <th scope="col">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for student in students %}
+            <tr>
+              <th scope="row">
+                <a href="{{ url_for('student_details', student_id=student.student_id) }}" class="student-link">{{ student.full_name }}</a>
+                <span class="row-sub">{{ student.academic_year }} • {{ student.scholarship_category }}</span>
+              </th>
+              <td class="tabular">{{ student.student_id }}</td>
+              <td>{{ student.department }}</td>
+              <td class="tabular">{{ "%.2f"|format(student.aggregate_percentage) }}%</td>
+              <td class="tabular">{{ "%.1f"|format(student.attendance_percentage) }}%</td>
+              <td class="tabular">{{ format_inr(student.annual_income) }}</td>
+              <td class="tabular">
+                {% if student.is_eligible %}
+                  <strong>{{ "%.2f"|format(student.scholarship_score) }}</strong>
+                {% else %}
+                  <span class="muted-meta">0.00</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if student.selection_code == 'selected' %}
+                  <span class="badge badge-success">Selected (Rank #{{ student.rank }})</span>
+                {% elif student.selection_code == 'waitlisted' %}
+                  <span class="badge badge-warning">Waitlisted (Rank #{{ student.rank }})</span>
+                {% else %}
+                  <span class="badge badge-danger">Not Eligible</span>
+                  <span class="row-sub text-danger">{{ student.rejection_summary }}</span>
+                {% endif %}
+              </td>
+              <td>
+                <div class="action-group">
+                  <a href="{{ url_for('student_details', student_id=student.student_id) }}" class="btn btn-sm btn-secondary">View</a>
+                  <a href="{{ url_for('edit_student_view', student_id=student.student_id) }}" class="btn btn-sm btn-secondary">Edit</a>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-danger-outline js-delete-trigger"
+                    data-delete-url="{{ url_for('delete_student_view', student_id=student.student_id) }}"
+                    data-student-name="{{ student.full_name }}"
+                    data-student-id="{{ student.student_id }}"
+                  >Delete</button>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <p>No applicants match your search or filter criteria.</p>
+      <a href="{{ url_for('applicants') }}" class="btn btn-secondary">Clear Filters</a>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

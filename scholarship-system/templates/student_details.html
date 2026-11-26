@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block title %}{{ student.full_name }} ({{ student.student_id }}) | Scholarship System{% endblock %}
+{% block page_title %}Applicant Evaluation Profile{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('applicants') }}" class="btn btn-secondary">All Applicants</a>
+  <a href="{{ url_for('edit_student_view', student_id=student.student_id) }}" class="btn btn-primary">Edit Application</a>
+  <button
+    type="button"
+    class="btn btn-danger-outline js-delete-trigger"
+    data-delete-url="{{ url_for('delete_student_view', student_id=student.student_id) }}"
+    data-student-name="{{ student.full_name }}"
+    data-student-id="{{ student.student_id }}"
+  >Delete</button>
+{% endblock %}
+
+{% block content %}
+<section class="panel profile-hero">
+  <div class="profile-hero-main">
+    <div>
+      <p class="muted-meta">{{ student.student_id }} • Applied {{ student.application_date }}</p>
+      <h2 class="profile-name">{{ student.full_name }}</h2>
+      <p class="profile-sub">{{ student.department }} • {{ student.academic_year }} • {{ student.scholarship_category }}</p>
+    </div>
+    <div class="profile-status-box">
+      {% if student.selection_code == 'selected' %}
+        <span class="badge badge-success badge-lg">Eligible &amp; Selected — Rank #{{ student.rank }}</span>
+      {% elif student.selection_code == 'waitlisted' %}
+        <span class="badge badge-warning badge-lg">Eligible (Waitlisted) — Rank #{{ student.rank }}</span>
+      {% else %}
+        <span class="badge badge-danger badge-lg">Not Eligible</span>
+      {% endif %}
+      <p class="merit-pattern">{{ student.merit_pattern }}</p>
+    </div>
+  </div>
+</section>
+
+<div class="dashboard-split">
+  <!-- Personal & Financial Information -->
+  <section class="panel" aria-labelledby="personal-info-heading">
+    <h2 id="personal-info-heading" class="panel-title">Student &amp; Financial Details</h2>
+    <dl class="detail-grid">
+      <div><dt>Student ID</dt><dd class="tabular">{{ student.student_id }}</dd></div>
+      <div><dt>Full Name</dt><dd>{{ student.full_name }}</dd></div>
+      <div><dt>Age</dt><dd class="tabular">{{ student.age }} years</dd></div>
+      <div><dt>Gender</dt><dd>{{ student.gender or 'Not specified' }}</dd></div>
+      <div><dt>Department</dt><dd>{{ student.department }}</dd></div>
+      <div><dt>Academic Year</dt><dd>{{ student.academic_year }}</dd></div>
+      <div><dt>Phone</dt><dd class="tabular">{{ student.phone or 'Not provided' }}</dd></div>
+      <div><dt>Email</dt><dd>{{ student.email or 'Not provided' }}</dd></div>
+      <div><dt>Annual Family Income</dt><dd class="tabular">{{ format_inr(student.annual_income) }}</dd></div>
+      <div><dt>Income Certificate</dt><dd>{{ student.income_certificate_status }}</dd></div>
+      <div><dt>Scholarship Category</dt><dd>{{ student.scholarship_category }}</dd></div>
+      <div><dt>Application Date</dt><dd class="tabular">{{ student.application_date }}</dd></div>
+    </dl>
+  </section>
+
+  <!-- Score Breakdown & Eligibility Checks -->
+  <section class="panel" aria-labelledby="eval-heading">
+    <h2 id="eval-heading" class="panel-title">Eligibility &amp; Score Calculation</h2>
+
+    <div class="score-formula-box">
+      <div class="formula-row">
+        <span>Aggregate ({{ "%.2f"|format(student.aggregate_percentage) }}% × {{ "%.2f"|format(rules.weight_aggregate) }})</span>
+        <strong class="tabular">{{ "%.2f"|format(student.aggregate_percentage * rules.weight_aggregate) }}</strong>
+      </div>
+      <div class="formula-row">
+        <span>Attendance ({{ "%.2f"|format(student.attendance_percentage) }}% × {{ "%.2f"|format(rules.weight_attendance) }})</span>
+        <strong class="tabular">{{ "%.2f"|format(student.attendance_percentage * rules.weight_attendance) }}</strong>
+      </div>
+      <div class="formula-row">
+        <span>Income Merit ({{ "%.0f"|format(student.income_merit_score) }} pts × {{ "%.2f"|format(rules.weight_income) }})</span>
+        <strong class="tabular">{{ "%.2f"|format(student.income_merit_score * rules.weight_income) }}</strong>
+      </div>
+      <div class="formula-total">
+        <span>Final Scholarship Score</span>
+        <strong class="tabular">{{ "%.2f"|format(student.scholarship_score) if student.is_eligible else "0.00 (Ineligible)" }}</strong>
+      </div>
+    </div>
+
+    {% if student.tie_note %}
+      <div class="alert alert-info">
+        <span><strong>Tie-Breaking Applied:</strong> {{ student.tie_note }}</span>
+      </div>
+    {% endif %}
+
+    {% if not student.is_eligible %}
+      <div class="alert alert-error">
+        <div>
+          <strong>Rejection Reasons:</strong>
+          <ul class="error-list">
+            {% for reason in student.rejection_reasons %}
+              <li>{{ reason }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    {% else %}
+      <div class="alert alert-success">
+        <span>All minimum aggregate, subject-wise, attendance, income, and certificate criteria satisfied.</span>
+      </div>
+    {% endif %}
+  </section>
+</div>
+
+<!-- Subject-wise Marks Breakdown -->
+<section class="panel" aria-labelledby="marks-table-caption">
+  <div class="panel-header">
+    <div>
+      <h2 id="marks-table-caption" class="panel-title">Subject-Wise Marks Breakdown</h2>
+      <p class="panel-subtitle">Minimum subject requirement: {{ "%.0f"|format(rules.min_subject_marks) }} / 100</p>
+    </div>
+    <span class="badge badge-primary tabular">Total: {{ "%.0f"|format(student.total_marks) }} / 500 ({{ "%.2f"|format(student.aggregate_percentage) }}%)</span>
+  </div>
+
+  <div tabindex="0" role="region" aria-labelledby="marks-table-caption" class="table-wrapper">
+    <table class="data-table" style="--label-2: 'Marks Obtained'; --label-3: 'Maximum'; --label-4: 'Rule Check';">
+      <caption class="visually-hidden">Subject-wise Marks Breakdown</caption>
+      <thead>
+        <tr>
+          <th scope="col">Subject</th>
+          <th scope="col">Marks Obtained</th>
+          <th scope="col">Maximum Marks</th>
+          <th scope="col">Minimum Rule Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for field_key, subject_label in subject_tuple %}
+          {% set mark = student[field_key] %}
+          <tr>
+            <th scope="row">{{ subject_label }}</th>
+            <td class="tabular">{{ "%.2f"|format(mark) }}</td>
+            <td class="tabular">100.00</td>
+            <td>
+              {% if mark >= rules.min_subject_marks %}
+                <span class="badge badge-success">Pass (≥ {{ "%.0f"|format(rules.min_subject_marks) }})</span>
+              {% else %}
+                <span class="badge badge-danger">Below Minimum (&lt; {{ "%.0f"|format(rules.min_subject_marks) }})</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+{% if student.award_banner %}
+<section class="panel" aria-labelledby="banner-heading">
+  <h2 id="banner-heading" class="panel-title">Generated Award Certificate Pattern</h2>
+  <p class="panel-subtitle">Formatted dynamically using Python loops and string alignment</p>
+  <pre class="ascii-banner">{{ student.award_banner }}</pre>
+</section>
+{% endif %}
+{% endblock %}

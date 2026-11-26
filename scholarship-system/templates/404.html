@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Page Not Found | Scholarship System{% endblock %}
+{% block page_title %}Record Not Found{% endblock %}
+
+{% block content %}
+<section class="panel empty-state">
+  <h2>404 — Student or Page Not Found</h2>
+  <p>The requested student ID or page could not be located in the system.</p>
+  <a href="{{ url_for('dashboard') }}" class="btn btn-primary">Return to Dashboard</a>
+</section>
+{% endblock %}

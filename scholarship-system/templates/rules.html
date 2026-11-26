@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block title %}Scholarship Rules | University Scholarship System{% endblock %}
+{% block page_title %}Configurable Scholarship Rules{% endblock %}
+
+{% block topbar_actions %}
+  <form method="POST" action="{{ url_for('rules_view') }}" class="inline-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="action" value="reset">
+    <button type="submit" class="btn btn-secondary">Reset to Defaults</button>
+  </form>
+  <a href="{{ url_for('rankings') }}" class="btn btn-primary">View Live Rankings</a>
+{% endblock %}
+
+{% block content %}
+{% if errors %}
+  <div class="alert alert-error error-summary" role="alert" tabindex="-1">
+    <div>
+      <strong>Please correct the following rule configuration errors:</strong>
+      <ul class="error-list">
+        {% for err in errors %}
+          <li>{{ err }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+{% endif %}
+
+<div class="rules-summary-banner panel">
+  <div>
+    <strong>Live Recalculation Active</strong>
+    <p class="panel-subtitle">Saving rule updates immediately re-evaluates all {{ summary.total_applicants }} applicants in SQLite ({{ summary.eligible_count }} eligible, {{ summary.scholarships_allocated }} selected).</p>
+  </div>
+</div>
+
+<form method="POST" action="{{ url_for('rules_view') }}" class="panel application-form" id="rules-config-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <input type="hidden" name="action" value="save">
+
+  <fieldset class="form-section">
+    <legend>1. Eligibility Thresholds &amp; Quota</legend>
+    <div class="form-grid form-grid-3">
+      <div class="field">
+        <label for="min_aggregate">Minimum Aggregate (%) <span aria-hidden="true">*</span></label>
+        <span id="min_agg-hint" class="hint">Default: 75.0%</span>
+        <input type="number" id="min_aggregate" name="min_aggregate" value="{{ rules.min_aggregate }}" required min="0" max="100" step="0.01" aria-describedby="min_agg-hint" data-error="min_agg-err">
+        <div id="min_agg-err" class="error-msg"><span role="img" aria-label="Error">⚠</span> Enter a percentage between 0 and 100.</div>
+      </div>
+
+      <div class="field">
+        <label for="min_subject_marks">Minimum Subject Marks <span aria-hidden="true">*</span></label>
+        <span id="min_sub-hint" class="hint">Required in all 5 subjects (Default: 50).</span>
+        <input type="number" id="min_subject_marks" name="min_subject_marks" value="{{ rules.min_subject_marks }}" required min="0" max="100" step="0.01" aria-describedby="min_sub-hint" data-error="min_sub-err">
+        <div id="min_sub-err" class="error-msg"><span role="img" aria-label="Error">⚠</span> Enter marks between 0 and 100.</div>
+      </div>
+
+      <div class="field">
+        <label for="min_attendance">Minimum Attendance (%) <span aria-hidden="true">*</span></label>
+        <span id="min_att-hint" class="hint">Default: 75.0%</span>
+        <input type="number" id="min_attendance" name="min_attendance" value="{{ rules.min_attendance }}" required min="0" max="100" step="0.01" aria-describedby="min_att-hint" data-error="min_att-err">
+        <div id="min_att-err" class="error-msg"><span role="img" aria-label="Error">⚠</span> Enter attendance between 0 and 100.</div>
+      </div>
+
+      <div class="field">
+        <label for="max_family_income">Maximum Family Income (₹) <span aria-hidden="true">*</span></label>
+        <span id="max_inc-hint" class="hint">Default: ₹2,50,000</span>
+        <input type="number" id="max_family_income" name="max_family_income" value="{{ rules.max_family_income }}" required min="0" step="1" aria-describedby="max_inc-hint" data-error="max_inc-err">
+        <div id="max_inc-err" class="error-msg"><span role="img" aria-label="Error">⚠</span> Income cap must be 0 or higher.</div>
+      </div>
+
+      <div class="field">
+        <label for="scholarship_quota">Scholarships Available (Quota) <span aria-hidden="true">*</span></label>
+        <span id="quota-hint" class="hint">Default: 10 seats</span>
+        <input type="number" id="scholarship_quota" name="scholarship_quota" value="{{ rules.scholarship_quota }}" required min="1" max="1000" step="1" aria-describedby="quota-hint" data-error="quota-err">
+        <div id="quota-err" class="error-msg"><span role="img" aria-label="Error">⚠</span> Quota must be a whole number from 1 to 1000.</div>
+      </div>
+
+      <div class="field checkbox-field">
+        <label class="checkbox-inline" for="income_certificate_required">
+          <input type="checkbox" id="income_certificate_required" name="income_certificate_required" value="1" {% if rules.income_certificate_required|int == 1 or rules.income_certificate_required == '1' %}checked{% endif %}>
+          <span>Income Certificate Required</span>
+        </label>
+        <span class="hint">When checked, applicants with "Missing" certificate are rejected.</span>
+      </div>
+    </div>
+  </fieldset>
+
+  <fieldset class="form-section">
+    <legend>2. Scholarship Score Formula Weights (Must Sum to 1.00)</legend>
+    <p class="section-lead">Formula: <code>(Aggregate × W1) + (Attendance × W2) + (Income Merit × W3)</code> • Current Weight Sum: <strong id="weight-sum-display" class="tabular">1.00</strong></p>
+    <div class="form-grid form-grid-3">
+      <div class="field">
+        <label for="weight_aggregate">Aggregate Weight (Default 0.70)</label>
+        <input type="number" id="weight_aggregate" name="weight_aggregate" class="weight-input" value="{{ rules.weight_aggregate }}" required min="0" max="1" step="0.01">
+      </div>
+      <div class="field">
+        <label for="weight_attendance">Attendance Weight (Default 0.20)</label>
+        <input type="number" id="weight_attendance" name="weight_attendance" class="weight-input" value="{{ rules.weight_attendance }}" required min="0" max="1" step="0.01">
+      </div>
+      <div class="field">
+        <label for="weight_income">Income Merit Weight (Default 0.10)</label>
+        <input type="number" id="weight_income" name="weight_income" class="weight-input" value="{{ rules.weight_income }}" required min="0" max="1" step="0.01">
+      </div>
+    </div>
+  </fieldset>
+
+  <fieldset class="form-section">
+    <legend>3. Income Merit Score Slabs (Ascending Upper Limits)</legend>
+    <div class="form-grid">
+      <div class="field">
+        <label for="slab1_limit">Slab 1 Max Income (₹)</label>
+        <input type="number" id="slab1_limit" name="slab1_limit" value="{{ rules.slab1_limit }}" required min="0" step="1">
+      </div>
+      <div class="field">
+        <label for="slab1_points">Slab 1 Points (0–100)</label>
+        <input type="number" id="slab1_points" name="slab1_points" value="{{ rules.slab1_points }}" required min="0" max="100" step="0.1">
+      </div>
+
+      <div class="field">
+        <label for="slab2_limit">Slab 2 Max Income (₹)</label>
+        <input type="number" id="slab2_limit" name="slab2_limit" value="{{ rules.slab2_limit }}" required min="0" step="1">
+      </div>
+      <div class="field">
+        <label for="slab2_points">Slab 2 Points (0–100)</label>
+        <input type="number" id="slab2_points" name="slab2_points" value="{{ rules.slab2_points }}" required min="0" max="100" step="0.1">
+      </div>
+
+      <div class="field">
+        <label for="slab3_limit">Slab 3 Max Income (₹)</label>
+        <input type="number" id="slab3_limit" name="slab3_limit" value="{{ rules.slab3_limit }}" required min="0" step="1">
+      </div>
+      <div class="field">
+        <label for="slab3_points">Slab 3 Points (0–100)</label>
+        <input type="number" id="slab3_points" name="slab3_points" value="{{ rules.slab3_points }}" required min="0" max="100" step="0.1">
+      </div>
+
+      <div class="field">
+        <label for="slab4_limit">Slab 4 Max Income (₹)</label>
+        <input type="number" id="slab4_limit" name="slab4_limit" value="{{ rules.slab4_limit }}" required min="0" step="1">
+      </div>
+      <div class="field">
+        <label for="slab4_points">Slab 4 Points (0–100)</label>
+        <input type="number" id="slab4_points" name="slab4_points" value="{{ rules.slab4_points }}" required min="0" max="100" step="0.1">
+      </div>
+
+      <div class="field">
+        <label for="slab_above_points">Points Above Slab 4 Limit</label>
+        <input type="number" id="slab_above_points" name="slab_above_points" value="{{ rules.slab_above_points }}" required min="0" max="100" step="0.1">
+      </div>
+    </div>
+  </fieldset>
+
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary">Save Rules &amp; Recalculate Rankings</button>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+  </div>
+</form>
+{% endblock %}

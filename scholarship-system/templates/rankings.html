@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% block title %}Rankings &amp; Allocation | University Scholarship System{% endblock %}
+{% block page_title %}Student Ranking &amp; Scholarship Allocation{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('rules_view') }}" class="btn btn-secondary">Adjust Quota &amp; Rules</a>
+  <a href="{{ url_for('export_csv') }}" class="btn btn-primary">Download Ranking CSV</a>
+{% endblock %}
+
+{% block content %}
+<section class="stats-grid stats-grid-4" aria-label="Ranking Summary">
+  <article class="stat-card stat-primary">
+    <p class="stat-label">Eligible Candidates</p>
+    <p class="stat-value tabular">{{ summary.eligible_count }}</p>
+    <p class="stat-note">Ranked by composite score</p>
+  </article>
+  <article class="stat-card stat-success">
+    <p class="stat-label">Eligible &amp; Selected</p>
+    <p class="stat-value tabular">{{ summary.scholarships_allocated }} / {{ summary.scholarships_available }}</p>
+    <p class="stat-note">Awarded within quota</p>
+  </article>
+  <article class="stat-card stat-gold">
+    <p class="stat-label">Waitlisted (Quota Full)</p>
+    <p class="stat-value tabular">{{ summary.waitlisted_count }}</p>
+    <p class="stat-note">Eligible beyond rank #{{ summary.scholarships_available }}</p>
+  </article>
+  <article class="stat-card stat-danger">
+    <p class="stat-label">Not Eligible</p>
+    <p class="stat-value tabular">{{ summary.rejected_count }}</p>
+    <p class="stat-note">Failed eligibility conditions</p>
+  </article>
+</section>
+
+<section class="panel tie-rules-panel" aria-labelledby="tie-rules-heading">
+  <div class="panel-header">
+    <div>
+      <h2 id="tie-rules-heading" class="panel-title">Tie-Breaking &amp; Formula Reference</h2>
+      <p class="panel-subtitle">
+        Score = (Aggregate × {{ "%.2f"|format(rules.weight_aggregate) }}) + (Attendance × {{ "%.2f"|format(rules.weight_attendance) }}) + (Income Merit × {{ "%.2f"|format(rules.weight_income) }})
+      </p>
+    </div>
+    <span class="badge badge-gold">Quota: Top {{ rules.scholarship_quota }}</span>
+  </div>
+  <ol class="tie-order-list">
+    <li>Higher Aggregate %</li>
+    <li>Higher Attendance %</li>
+    <li>Lower Annual Family Income</li>
+    <li>Higher Total Marks</li>
+    <li>Alphabetical Student ID</li>
+  </ol>
+</section>
+
+<!-- Eligible Ranked Table -->
+<section class="panel" aria-labelledby="ranked-table-caption">
+  <div class="panel-header">
+    <div>
+      <h2 id="ranked-table-caption" class="panel-title">Eligible Students Merit Ranking ({{ eligible_ranked|length }})</h2>
+      <p class="panel-subtitle">Top {{ rules.scholarship_quota }} ranks are selected; remaining eligible students are placed on quota waitlist.</p>
+    </div>
+  </div>
+
+  {% if eligible_ranked %}
+    <div tabindex="0" role="region" aria-labelledby="ranked-table-caption" class="table-wrapper">
+      <table class="data-table" style="--label-2: 'Rank'; --label-3: 'Student ID'; --label-4: 'Aggregate'; --label-5: 'Attendance'; --label-6: 'Family Income'; --label-7: 'Score'; --label-8: 'Eligibility'; --label-9: 'Selection Status';">
+        <caption class="visually-hidden">Eligible Students Merit Ranking</caption>
+        <thead>
+          <tr>
+            <th scope="col">Student Name</th>
+            <th scope="col">Rank</th>
+            <th scope="col">Student ID</th>
+            <th scope="col">Aggregate</th>
+            <th scope="col">Attendance</th>
+            <th scope="col">Family Income</th>
+            <th scope="col">Scholarship Score</th>
+            <th scope="col">Eligibility</th>
+            <th scope="col">Selection Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for student in eligible_ranked %}
+            <tr class="{% if student.selection_code == 'selected' %}row-selected{% else %}row-waitlisted{% endif %}">
+              <th scope="row">
+                <a href="{{ url_for('student_details', student_id=student.student_id) }}" class="student-link">{{ student.full_name }}</a>
+                <span class="row-sub">{{ student.department }} • {{ student.merit_pattern }}</span>
+              </th>
+              <td class="tabular">
+                <span class="rank-pill {% if student.rank <= 3 %}rank-top{% endif %}">#{{ student.rank }}</span>
+              </td>
+              <td class="tabular">{{ student.student_id }}</td>
+              <td class="tabular">
+                <strong>{{ "%.2f"|format(student.aggregate_percentage) }}%</strong>
+                <span class="row-sub">Total: {{ "%.0f"|format(student.total_marks) }}/500</span>
+              </td>
+              <td class="tabular">{{ "%.2f"|format(student.attendance_percentage) }}%</td>
+              <td class="tabular">{{ format_inr(student.annual_income) }}</td>
+              <td class="tabular">
+                <strong>{{ "%.2f"|format(student.scholarship_score) }}</strong>
+                {% if student.tie_note %}
+                  <span class="row-sub text-royal">{{ student.tie_note }}</span>
+                {% endif %}
+              </td>
+              <td><span class="badge badge-success">Eligible</span></td>
+              <td>
+                {% if student.selection_code == 'selected' %}
+                  <span class="badge badge-gold">Eligible &amp; Selected</span>
+                {% else %}
+                  <span class="badge badge-warning">Eligible (Not Selected — Quota Full)</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <p>No students currently meet all eligibility requirements.</p>
+    </div>
+  {% endif %}
+</section>
+
+<!-- Rejected Applicants Table -->
+<section class="panel" aria-labelledby="rejected-table-caption">
+  <div class="panel-header">
+    <div>
+      <h2 id="rejected-table-caption" class="panel-title">Rejected Applicants ({{ rejected_students|length }})</h2>
+      <p class="panel-subtitle">Specific eligibility rules that each applicant did not satisfy</p>
+    </div>
+  </div>
+
+  {% if rejected_students %}
+    <div tabindex="0" role="region" aria-labelledby="rejected-table-caption" class="table-wrapper">
+      <table class="data-table" style="--label-2: 'Student ID'; --label-3: 'Aggregate'; --label-4: 'Attendance'; --label-5: 'Family Income'; --label-6: 'Eligibility'; --label-7: 'Rejection Reasons';">
+        <caption class="visually-hidden">Rejected Applicants and Reasons</caption>
+        <thead>
+          <tr>
+            <th scope="col">Student Name</th>
+            <th scope="col">Student ID</th>
+            <th scope="col">Aggregate</th>
+            <th scope="col">Attendance</th>
+            <th scope="col">Family Income</th>
+            <th scope="col">Eligibility</th>
+            <th scope="col">Specific Rejection Reasons</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for student in rejected_students %}
+            <tr>
+              <th scope="row">
+                <a href="{{ url_for('student_details', student_id=student.student_id) }}" class="student-link">{{ student.full_name }}</a>
+                <span class="row-sub">{{ student.department }}</span>
+              </th>
+              <td class="tabular">{{ student.student_id }}</td>
+              <td class="tabular">
+                <strong>{{ "%.2f"|format(student.aggregate_percentage) }}%</strong>
+                <span class="row-sub">Total: {{ "%.0f"|format(student.total_marks) }}/500</span>
+              </td>
+              <td class="tabular">{{ "%.2f"|format(student.attendance_percentage) }}%</td>
+              <td class="tabular">{{ format_inr(student.annual_income) }}</td>
+              <td><span class="badge badge-danger">Not Eligible</span></td>
+              <td>
+                <ul class="reason-list">
+                  {% for reason in student.rejection_reasons %}
+                    <li>{{ reason }}</li>
+                  {% endfor %}
+                </ul>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty-state">
+      {% if summary.total_applicants == 0 %}
+        <p>No student applications in the database.</p>
+      {% else %}
+        <p>All applicants are currently eligible.</p>
+      {% endif %}
+    </div>
+  {% endif %}
+</section>
+{% endblock %}
