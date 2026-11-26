@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<section class="hero-banner">
+  <div>
+    <span class="hero-tag">CASE STUDY #57 &bull; SEQUENTIAL ORDER &amp; STOCK MANAGEMENT</span>
+    <h2>Smart Canteen Order &amp; Stock Management</h2>
+    <p>Process successive customer orders with real-time inventory deduction, reject unavailable quantities safely, track daily revenue and 5% campus GST, and monitor remaining stock levels.</p>
+  </div>
+  <div class="hero-actions">
+    <a href="{{ url_for('order_counter') }}" class="btn btn-primary">Place Order</a>
+    <a href="{{ url_for('order_queue') }}" class="btn btn-outline">Run Batch Queue</a>
+  </div>
+</section>
+
+<section class="kpi-grid">
+  <div class="kpi-card"><div class="kpi-label">Daily Revenue</div><div class="kpi-value">{{ summary.total_revenue | inr }}</div><div class="kpi-meta">{{ summary.total_units_sold }} units sold</div></div>
+  <div class="kpi-card"><div class="kpi-label">Orders Processed</div><div class="kpi-value">{{ summary.total_orders }}</div><div class="kpi-meta">{{ summary.completed_count }} full &bull; {{ summary.partial_count }} partial &bull; {{ summary.rejected_count }} rejected</div></div>
+  <div class="kpi-card"><div class="kpi-label">Low Stock Alerts</div><div class="kpi-value">{{ summary.low_stock_items | length }}</div><div class="kpi-meta">At or below reorder level</div></div>
+  <div class="kpi-card"><div class="kpi-label">Menu Items</div><div class="kpi-value">{{ summary.stock_rows | length }}</div><div class="kpi-meta">Live SQLite inventory</div></div>
+</section>
+
+<div class="grid-2">
+  <section class="card">
+    <div class="card-header"><h3>Recent Customer Orders</h3><a href="{{ url_for('reports') }}" class="btn btn-outline btn-sm">Full Summary</a></div>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>Order #</th><th>Customer</th><th>Status</th><th>Total</th><th>Items / Notes</th></tr></thead>
+        <tbody>
+          {% for o in orders %}
+          <tr>
+            <th class="mono">{{ o.order_number }}</th>
+            <td>{{ o.customer_name }}</td>
+            <td><span class="badge {% if o.status == 'COMPLETED' %}badge-green{% elif o.status == 'PARTIAL' %}badge-amber{% else %}badge-red{% endif %}">{{ o.status }}</span></td>
+            <td class="mono">{{ o.grand_total | inr }}</td>
+            <td class="small">{{ o.summary_text }}{% if o.rejection_notes %}<br><span style="color:var(--red-700);">{{ o.rejection_notes }}</span>{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-header"><h3>ASCII Stock &amp; Sales Report</h3></div>
+    <pre class="ascii-box">{{ summary.ascii_summary }}</pre>
+  </section>
+</div>
+{% endblock %}

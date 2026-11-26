@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Successive Queue{% endblock %}
+{% block page_title %}Successive Customer Order Queue{% endblock %}
+{% block content %}
+<section class="card">
+  <div class="card-header"><h3>Simulate Sequential Orders (`Customer | CODE:QTY, CODE:QTY`)</h3></div>
+  <form method="post" class="form-grid">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="field field-full"><textarea name="queue_text" rows="5" class="mono">{{ raw_queue }}</textarea></div>
+    <div class="field field-full"><label><input type="checkbox" name="commit_queue" value="1"> Commit stock deductions &amp; orders to SQLite</label></div>
+    <div class="field-full"><button type="submit" class="btn btn-primary">Run Successive Queue</button></div>
+  </form>
+</section>
+{% if batch_result %}
+<section class="card">
+  <div class="card-header"><h3>Queue Execution Results</h3><strong>Batch Revenue: {{ batch_result.total_batch_revenue | inr }}</strong></div>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Step</th><th>Customer</th><th>Status</th><th>Accepted Items</th><th>Rejections</th><th>Bill Total</th></tr></thead>
+      <tbody>
+        {% for o in batch_result.orders %}
+        <tr>
+          <th>#{{ o.step }}</th>
+          <td>{{ o.customer_name }}</td>
+          <td><span class="badge {% if o.status == 'COMPLETED' %}badge-green{% elif o.status == 'PARTIAL' %}badge-amber{% else %}badge-red{% endif %}">{{ o.status }}</span></td>
+          <td class="small">{% for l in o.accepted_lines %}{{ l.qty }}x {{ l.item_name }} ({{ l.line_total | inr }})<br>{% endfor %}</td>
+          <td class="small" style="color:var(--red-700);">{% for c, q, r in o.rejected_lines %}{{ r }}<br>{% endfor %}</td>
+          <td class="mono"><strong>{{ o.grand_total | inr }}</strong></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

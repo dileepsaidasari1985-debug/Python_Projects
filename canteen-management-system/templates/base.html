@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Smart Canteen{% endblock %} | Case Study #57</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <div class="app-shell">
+    <div class="Drawer" id="drawer" popover="manual" role="dialog" aria-label="Primary navigation">
+      <div class="Drawer-scroller">
+        <aside class="Drawer-sheet sidebar">
+          <div class="sidebar-header">
+            <a href="{{ url_for('dashboard') }}" class="brand">
+              <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="" width="38" height="38">
+              <div><span class="brand-title">CampusBite</span><span class="brand-sub">Case Study #57</span></div>
+            </a>
+            <button type="button" id="drawer-close" class="drawer-close-btn" aria-label="Close menu" autofocus>✕</button>
+          </div>
+          <div class="status-chip">
+            <span class="chip-badge">CANTEEN INVENTORY</span>
+            <strong>{{ nav_items }} Menu Items</strong>
+            <span class="small">{{ nav_orders }} Orders &bull; {{ nav_low_stock }} Low Stock</span>
+          </div>
+          <nav class="sidebar-nav">
+            <p class="nav-group-label">Operations</p>
+            <a href="{{ url_for('dashboard') }}" class="nav-link {% if current_endpoint == 'dashboard' %}is-active{% endif %}">Dashboard</a>
+            <a href="{{ url_for('order_counter') }}" class="nav-link {% if current_endpoint == 'order_counter' %}is-active{% endif %}">Order Counter</a>
+            <a href="{{ url_for('order_queue') }}" class="nav-link {% if current_endpoint == 'order_queue' %}is-active{% endif %}">Successive Queue</a>
+            <p class="nav-group-label">Stock &amp; Sales</p>
+            <a href="{{ url_for('inventory') }}" class="nav-link {% if current_endpoint == 'inventory' %}is-active{% endif %}">Inventory &amp; Restock</a>
+            <a href="{{ url_for('reports') }}" class="nav-link {% if current_endpoint == 'reports' %}is-active{% endif %}">Daily Sales Summary</a>
+          </nav>
+          <div class="sidebar-footer">Python Activity-Based Learning<br>Sequential Orders &amp; Stock Control</div>
+        </aside>
+      </div>
+    </div>
+    <div class="main-shell" id="main-shell">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button type="button" id="drawer-open" class="menu-toggle-btn" aria-label="Open menu" aria-expanded="false" aria-controls="drawer">☰</button>
+          <div>
+            <h1 class="page-heading">{% block page_title %}Smart Canteen Dashboard{% endblock %}</h1>
+            <p class="page-subtitle">{% block page_subtitle %}Process successive orders, enforce inventory limits &amp; summarize daily sales{% endblock %}</p>
+          </div>
+        </div>
+        <div class="topbar-right">
+          <a href="{{ url_for('order_counter') }}" class="btn btn-primary btn-sm">New Order</a>
+          <a href="{{ url_for('export_csv') }}" class="btn btn-outline btn-sm">Export CSV</a>
+        </div>
+      </header>
+      <main class="content-area">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}<div class="flash-stack">{% for cat, msg in messages %}<div class="alert alert-{{ cat }}"><span class="alert-tag">{{ cat | upper }}</span><span>{{ msg }}</span></div>{% endfor %}</div>{% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+  <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

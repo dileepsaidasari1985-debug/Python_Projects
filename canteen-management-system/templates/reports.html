@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Daily Sales Summary{% endblock %}
+{% block page_title %}Daily Sales &amp; Remaining Stock Report{% endblock %}
+{% block content %}
+<section class="card">
+  <div class="card-header"><h3>Daily Summary</h3><a href="{{ url_for('export_csv') }}" class="btn btn-primary btn-sm">Download CSV</a></div>
+  <pre class="ascii-box">{{ summary.ascii_summary }}</pre>
+</section>
+{% endblock %}

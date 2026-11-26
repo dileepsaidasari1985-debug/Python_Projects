@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Order Counter{% endblock %}
+{% block page_title %}Canteen Order Counter{% endblock %}
+{% block content %}
+<section class="card">
+  <div class="card-header"><h3>Create Customer Order</h3></div>
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="field" style="max-width:340px;margin-bottom:1rem;">
+      <label for="customer_name">Customer / Student Name</label>
+      <input id="customer_name" name="customer_name" value="Ananya (CS-3A)" required>
+    </div>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>Code</th><th>Item</th><th>Category</th><th>Price</th><th>Available Stock</th><th>Order Qty</th></tr></thead>
+        <tbody>
+          {% for item in inventory %}
+          <tr>
+            <th class="mono">{{ item.item_code }}</th>
+            <td>{{ item.item_name }}</td>
+            <td>{{ item.category }}</td>
+            <td class="mono">{{ item.unit_price | inr }}</td>
+            <td class="mono">{{ item.stock }}</td>
+            <td><input type="number" name="qty_{{ item.item_code }}" min="0" value="0" style="max-width:90px;"></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div style="margin-top:1rem;"><button type="submit" class="btn btn-primary">Process Order &amp; Update Stock</button></div>
+  </form>
+</section>
+
+{% if last_result %}
+<section class="card">
+  <div class="card-header"><h3>Bill &amp; Validation Output ({{ last_result.status }})</h3></div>
+  <p><strong>Subtotal:</strong> {{ last_result.subtotal | inr }} &bull; <strong>GST (5%):</strong> {{ last_result.gst_amount | inr }} &bull; <strong>Payable Total:</strong> {{ last_result.grand_total | inr }}</p>
+  {% if last_result.rejected_lines %}
+    <div class="alert alert-danger" style="flex-direction:column;align-items:flex-start;">
+      <strong>Rejected Quantities:</strong>
+      <ul style="margin:0;">{% for code, qty, reason in last_result.rejected_lines %}<li>{{ code }} (qty {{ qty }}): {{ reason }}</li>{% endfor %}</ul>
+    </div>
+  {% endif %}
+</section>
+{% endif %}
+{% endblock %}
