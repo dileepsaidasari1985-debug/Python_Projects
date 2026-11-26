@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Audit Logs{% endblock %}
+{% block page_title %}Masked Evaluation Audit Logs{% endblock %}
+{% block content %}
+<section class="card">
+  <div class="card-header"><h3>History ({{ logs | length }})</h3><a href="{{ url_for('export_csv') }}" class="btn btn-primary btn-sm">Export CSV</a></div>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Label</th><th>User</th><th>Masked</th><th>Verdict</th><th>Score</th><th>Explanation</th></tr></thead>
+      <tbody>
+        {% for l in logs %}
+        <tr><th>{{ l.sample_label }}</th><td>{{ l.username }}</td><td class="mono">{{ l.masked_preview }}</td><td><span class="badge {% if l.verdict == 'PASS' %}badge-green{% else %}badge-red{% endif %}">{{ l.verdict }}</span></td><td>{{ l.score }}</td><td class="small">{{ l.failed_reasons }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

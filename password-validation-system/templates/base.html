@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Password Policy Engine{% endblock %} | Case Study #29</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <div class="app-shell">
+    <div class="Drawer" id="drawer" popover="manual" role="dialog" aria-label="Primary navigation">
+      <div class="Drawer-scroller">
+        <aside class="Drawer-sheet sidebar">
+          <div class="sidebar-header">
+            <a href="{{ url_for('dashboard') }}" class="brand">
+              <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="" width="38" height="38">
+              <div><span class="brand-title">PassGuard</span><span class="brand-sub">Case Study #29</span></div>
+            </a>
+            <button type="button" id="drawer-close" class="drawer-close-btn" aria-label="Close menu" autofocus>✕</button>
+          </div>
+          <div class="status-chip">
+            <span class="chip-badge">ACTIVE POLICY</span>
+            <strong>Min {{ policy.min_length }} Chars &bull; Max {{ policy.max_consecutive_repeat }} Repeat</strong>
+            <span class="small">{{ nav_logs }} Sample Audits Logged</span>
+          </div>
+          <nav class="sidebar-nav">
+            <p class="nav-group-label">Validation</p>
+            <a href="{{ url_for('dashboard') }}" class="nav-link {% if current_endpoint == 'dashboard' %}is-active{% endif %}">Dashboard</a>
+            <a href="{{ url_for('validator') }}" class="nav-link {% if current_endpoint == 'validator' %}is-active{% endif %}">Password Validator</a>
+            <a href="{{ url_for('batch') }}" class="nav-link {% if current_endpoint == 'batch' %}is-active{% endif %}">Batch Sample Tester</a>
+            <p class="nav-group-label">Governance</p>
+            <a href="{{ url_for('policy_rules') }}" class="nav-link {% if current_endpoint == 'policy_rules' %}is-active{% endif %}">Policy Rules</a>
+            <a href="{{ url_for('logs') }}" class="nav-link {% if current_endpoint == 'logs' %}is-active{% endif %}">Audit Logs</a>
+          </nav>
+          <div class="sidebar-footer">Python Activity-Based Learning<br>Strings, Loops &amp; Rule Diagnostics</div>
+        </aside>
+      </div>
+    </div>
+    <div class="main-shell" id="main-shell">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button type="button" id="drawer-open" class="menu-toggle-btn" aria-label="Open menu" aria-expanded="false" aria-controls="drawer">☰</button>
+          <div>
+            <h1 class="page-heading">{% block page_title %}Password Policy Dashboard{% endblock %}</h1>
+            <p class="page-subtitle">{% block page_subtitle %}Evaluate length, character categories, repetition &amp; prohibited substrings{% endblock %}</p>
+          </div>
+        </div>
+        <div class="topbar-right">
+          <a href="{{ url_for('validator') }}" class="btn btn-primary btn-sm">Test Password</a>
+          <a href="{{ url_for('export_csv') }}" class="btn btn-outline btn-sm">Export CSV</a>
+        </div>
+      </header>
+      <main class="content-area">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}<div class="flash-stack">{% for cat, msg in messages %}<div class="alert alert-{{ cat }}"><span class="alert-tag">{{ cat | upper }}</span><span>{{ msg }}</span></div>{% endfor %}</div>{% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+  <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<section class="hero-banner">
+  <div>
+    <span class="hero-tag">CASE STUDY #29 &bull; STRING SCANNING &amp; DIAGNOSTIC RULES</span>
+    <h2>Password Policy Validation Engine</h2>
+    <p>Evaluate sample password strings character-by-character against configurable length, uppercase/lowercase/digit/special thresholds, consecutive repetition caps, and prohibited dictionary/username substrings.</p>
+  </div>
+  <div class="hero-actions">
+    <a href="{{ url_for('validator') }}" class="btn btn-primary">Interactive Validator</a>
+    <a href="{{ url_for('batch') }}" class="btn btn-outline">Run Batch Suite</a>
+  </div>
+</section>
+
+<section class="kpi-grid">
+  <div class="kpi-card"><div class="kpi-label">Min Length</div><div class="kpi-value">{{ policy.min_length }}</div><div class="kpi-meta">Categories: {{ policy.min_upper }}U / {{ policy.min_lower }}L / {{ policy.min_digits }}D / {{ policy.min_special }}S</div></div>
+  <div class="kpi-card"><div class="kpi-label">Max Repeat Run</div><div class="kpi-value">{{ policy.max_consecutive_repeat }}</div><div class="kpi-meta">Consecutive identical chars</div></div>
+  <div class="kpi-card"><div class="kpi-label">Compliant Audits</div><div class="kpi-value">{{ passed }}</div><div class="kpi-meta">Passed all rules</div></div>
+  <div class="kpi-card"><div class="kpi-label">Failed Audits</div><div class="kpi-value">{{ failed }}</div><div class="kpi-meta">Detailed reasons logged</div></div>
+</section>
+
+<section class="card">
+  <div class="card-header"><h3>Sample Password Suite Evaluation</h3><a href="{{ url_for('batch') }}" class="btn btn-outline btn-sm">Customize Batch</a></div>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Sample Case</th><th>Preview</th><th>Strength</th><th>Verdict</th><th>Failed Condition Explanation</th></tr></thead>
+      <tbody>
+        {% for row in batch_preview %}
+        {% set ev = row.evaluation %}
+        <tr>
+          <th>{{ row.label }}<br><span class="small muted">user: {{ row.username }}</span></th>
+          <td class="mono">{{ ev.masked_password }} (len {{ ev.length }})</td>
+          <td class="mono">{{ ev.strength_bar }}<br><span class="small">{{ ev.strength_label }}</span></td>
+          <td><span class="badge {% if ev.is_compliant %}badge-green{% else %}badge-red{% endif %}">{{ ev.verdict }}</span></td>
+          <td class="small">{% if ev.failed_explanations %}{{ ev.failed_explanations | join(" ") }}{% else %}All policy conditions satisfied.{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

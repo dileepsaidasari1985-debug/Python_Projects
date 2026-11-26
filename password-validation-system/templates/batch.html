@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Batch Tester{% endblock %}
+{% block page_title %}Batch Sample Password Validation{% endblock %}
+{% block content %}
+<section class="card">
+  <div class="card-header"><h3>Test Multiple Passwords (`Label | Password | Username`)</h3></div>
+  <form method="post" class="form-grid">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="field field-full"><textarea name="batch_lines" rows="6" class="mono">{{ raw_lines }}</textarea></div>
+    <div class="field-full"><button type="submit" class="btn btn-primary">Evaluate All Samples</button></div>
+  </form>
+</section>
+<section class="card">
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Label</th><th>Masked</th><th>Score</th><th>Verdict</th><th>Failed Conditions</th></tr></thead>
+      <tbody>
+        {% for item in results %}
+        {% set ev = item.evaluation %}
+        <tr>
+          <th>{{ item.label }}</th>
+          <td class="mono">{{ ev.masked_password }}</td>
+          <td class="mono">{{ ev.strength_bar }}</td>
+          <td><span class="badge {% if ev.is_compliant %}badge-green{% else %}badge-red{% endif %}">{{ ev.verdict }}</span></td>
+          <td class="small">{% if ev.failed_explanations %}<ul style="margin:0;padding-left:1rem;">{% for f in ev.failed_explanations %}<li>{{ f }}</li>{% endfor %}</ul>{% else %}None{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

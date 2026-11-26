@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Policy Rules{% endblock %}
+{% block page_title %}Configure Password Policy Rules{% endblock %}
+{% block content %}
+<section class="card">
+  <form method="post" class="form-grid">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="field"><label for="min_length">Minimum Length</label><input id="min_length" name="min_length" type="number" value="{{ policy.min_length }}" min="4" max="64" required></div>
+    <div class="field"><label for="max_consecutive_repeat">Max Consecutive Identical Chars</label><input id="max_consecutive_repeat" name="max_consecutive_repeat" type="number" value="{{ policy.max_consecutive_repeat }}" min="1" max="10" required></div>
+    <div class="field"><label for="min_upper">Min Uppercase</label><input id="min_upper" name="min_upper" type="number" value="{{ policy.min_upper }}" min="0" max="10" required></div>
+    <div class="field"><label for="min_lower">Min Lowercase</label><input id="min_lower" name="min_lower" type="number" value="{{ policy.min_lower }}" min="0" max="10" required></div>
+    <div class="field"><label for="min_digits">Min Digits</label><input id="min_digits" name="min_digits" type="number" value="{{ policy.min_digits }}" min="0" max="10" required></div>
+    <div class="field"><label for="min_special">Min Special Chars</label><input id="min_special" name="min_special" type="number" value="{{ policy.min_special }}" min="0" max="10" required></div>
+    <div class="field field-full"><label for="prohibited_csv">Prohibited Substrings (comma-separated)</label><input id="prohibited_csv" name="prohibited_csv" class="mono" value="{{ policy.prohibited_csv }}"></div>
+    <div class="field field-full"><label><input type="checkbox" name="disallow_spaces" value="1" {% if policy.disallow_spaces %}checked{% endif %}> Disallow whitespace characters</label></div>
+    <div class="field-full" style="display:flex;gap:0.65rem;">
+      <button type="submit" name="action" value="save" class="btn btn-primary">Save Policy</button>
+      <button type="submit" name="action" value="reset" class="btn btn-outline">Reset Defaults</button>
+    </div>
+  </form>
+</section>
+{% endblock %}

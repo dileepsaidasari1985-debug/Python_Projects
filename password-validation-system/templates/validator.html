@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Password Validator{% endblock %}
+{% block page_title %}Interactive Password Policy Validator{% endblock %}
+{% block content %}
+<div class="grid-2">
+  <section class="card">
+    <div class="card-header"><h3>Evaluate Sample Password String</h3></div>
+    <form method="post" class="form-grid">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="field"><label for="sample_label">Sample Label</label><input id="sample_label" name="sample_label" value="{{ sample_label }}"></div>
+      <div class="field"><label for="username">Username (checked as prohibited substring)</label><input id="username" name="username" value="{{ sample_user }}"></div>
+      <div class="field field-full"><label for="password">Sample Password String (Educational Test Input)</label><input id="password" name="password" type="text" class="mono" value="{{ sample_pw }}"></div>
+      <div class="field field-full"><label><input type="checkbox" name="log_result" value="1" checked> Save masked evaluation to SQLite audit log</label></div>
+      <div class="field-full"><button type="submit" class="btn btn-primary">Evaluate Password Policy</button></div>
+    </form>
+  </section>
+
+  <section class="card">
+    <div class="card-header">
+      <h3>Evaluation Result: <span class="badge {% if result.is_compliant %}badge-green{% else %}badge-red{% endif %}">{{ result.verdict }} ({{ result.strength_label }})</span></h3>
+      <span class="mono small">{{ result.passed_rules }}/{{ result.total_rules }} rules passed</span>
+    </div>
+    <div class="meter-bar"><div class="meter-fill" style="width:{{ result.score }}%"></div></div>
+    <p class="mono small">Strength Pattern: {{ result.strength_bar }}</p>
+    <p class="small muted">Counts &mdash; Upper: {{ result.upper_count }}, Lower: {{ result.lower_count }}, Digits: {{ result.digit_count }}, Special: {{ result.special_count }}, Max Repeat Run: {{ result.max_consecutive_repeat }}</p>
+    <div class="rule-list" style="margin-top:0.85rem;">
+      {% for r_id, r_name, ok, msg in result.rule_results %}
+      <div class="rule-item {% if ok %}is-pass{% else %}is-fail{% endif %}">
+        <div>
+          <strong>{{ r_name }}</strong><br>
+          <span class="small">{{ msg }}</span>
+        </div>
+        <span class="badge {% if ok %}badge-green{% else %}badge-red{% endif %}">{% if ok %}PASS{% else %}FAIL{% endif %}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}
