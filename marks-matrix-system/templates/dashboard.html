@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<section class="hero-banner">
+  <div>
+    <span class="hero-tag">CASE STUDY #42 &bull; NESTED LISTS &amp; 2D MATRIX STATISTICS</span>
+    <h2>Student Marks Matrix Analysis</h2>
+    <p>Traverse 2D student-subject mark matrices row-wise and column-wise using nested loops, identify top academic performers with tuple tie-breaking, and flag subjects falling below average thresholds.</p>
+  </div>
+  <div class="hero-actions">
+    <a href="{{ url_for('matrix_view') }}" class="btn btn-primary">Manage Marks Matrix</a>
+    <a href="{{ url_for('sandbox') }}" class="btn btn-outline">Matrix Sandbox</a>
+  </div>
+</section>
+
+<section class="kpi-grid">
+  <div class="kpi-card"><div class="kpi-label">Students Analysed</div><div class="kpi-value">{{ analysis.student_count }}</div><div class="kpi-meta">{{ subjects | length }} subjects per row</div></div>
+  <div class="kpi-card"><div class="kpi-label">Class Overall Average</div><div class="kpi-value">{{ analysis.overall_average }}%</div><div class="kpi-meta">Pass mark: {{ analysis.pass_mark }}%</div></div>
+  <div class="kpi-card"><div class="kpi-label">Top Performer</div><div class="kpi-value">{% if analysis.top_performers %}{{ analysis.top_performers[0].average }}%{% else %}—{% endif %}</div><div class="kpi-meta">{% if analysis.top_performers %}{{ analysis.top_performers[0].student_name }}{% endif %}</div></div>
+  <div class="kpi-card"><div class="kpi-label">Low-Avg Subjects</div><div class="kpi-value">{{ analysis.low_avg_subjects | length }}</div><div class="kpi-meta">Below {{ analysis.low_avg_threshold }}% threshold</div></div>
+</section>
+
+<div class="grid-2">
+  <section class="card">
+    <div class="card-header"><h3>Top Performers Leaderboard</h3></div>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>Rank</th><th>Student</th><th>Total</th><th>Average</th><th>Grade</th></tr></thead>
+        <tbody>
+          {% for t in analysis.top_performers %}
+          <tr>
+            <th>#{{ t.rank }}</th>
+            <td>{{ t.student_name }} <span class="mono small muted">({{ t.student_id }})</span></td>
+            <td class="mono">{{ t.total }}</td>
+            <td class="mono"><strong>{{ t.average }}%</strong></td>
+            <td><span class="badge badge-green">{{ t.grade }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-header"><h3>Column-Wise Subject Statistics</h3></div>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>Subject</th><th>Avg</th><th>Min / Max</th><th>Pass Rate</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for c in analysis.col_stats %}
+          <tr>
+            <th>{{ c.subject }}</th>
+            <td class="mono">{{ c.average }}%</td>
+            <td class="mono">{{ c.lowest }} / {{ c.highest }}</td>
+            <td class="mono">{{ c.pass_rate }}%</td>
+            <td>
+              {% if c.is_low_avg %}
+                <span class="badge badge-red">Low Avg (-{{ c.deficit }})</span>
+              {% else %}
+                <span class="badge badge-green">Healthy</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<section class="card">
+  <div class="card-header"><h3>ASCII Matrix Statistical Summary</h3></div>
+  <pre class="ascii-box">{{ analysis.ascii_report }}</pre>
+</section>
+{% endblock %}

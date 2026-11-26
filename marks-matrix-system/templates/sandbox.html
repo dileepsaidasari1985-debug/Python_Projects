@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Matrix Sandbox{% endblock %}
+{% block page_title %}Custom Marks Matrix Sandbox{% endblock %}
+{% block content %}
+<section class="card">
+  <div class="card-header"><h3>Paste Custom Matrix (`ID, Name, Math, Physics, Chemistry, English, CS`)</h3></div>
+  {% if errors %}<div class="alert alert-danger" style="margin-bottom:1rem;"><div>{% for e in errors %}<div>{{ e }}</div>{% endfor %}</div></div>{% endif %}
+  <form method="post" class="form-grid">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="field field-full"><textarea name="matrix_text" rows="5" class="mono">{{ raw_text }}</textarea></div>
+    <div class="field-full"><button type="submit" class="btn btn-primary">Analyze Custom Matrix</button></div>
+  </form>
+</section>
+{% if analysis %}
+<section class="card">
+  <div class="card-header"><h3>Custom Analysis Output</h3></div>
+  <pre class="ascii-box">{{ analysis.ascii_report }}</pre>
+</section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Marks Matrix Analysis{% endblock %} | Case Study #42</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <div class="app-shell">
+    <div class="Drawer" id="drawer" popover="manual" role="dialog" aria-label="Primary navigation">
+      <div class="Drawer-scroller">
+        <aside class="Drawer-sheet sidebar">
+          <div class="sidebar-header">
+            <a href="{{ url_for('dashboard') }}" class="brand">
+              <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="" width="38" height="38">
+              <div><span class="brand-title">GradeMatrix</span><span class="brand-sub">Case Study #42</span></div>
+            </a>
+            <button type="button" id="drawer-close" class="drawer-close-btn" aria-label="Close menu" autofocus>✕</button>
+          </div>
+          <div class="status-chip">
+            <span class="chip-badge">COHORT MATRIX</span>
+            <strong>{{ nav_students }} Students &times; {{ subjects | length }} Subjects</strong>
+            <span class="small">Low Avg Alert &lt; {{ settings.low_avg_threshold }}%</span>
+          </div>
+          <nav class="sidebar-nav">
+            <p class="nav-group-label">Analytics</p>
+            <a href="{{ url_for('dashboard') }}" class="nav-link {% if current_endpoint == 'dashboard' %}is-active{% endif %}">Dashboard</a>
+            <a href="{{ url_for('matrix_view') }}" class="nav-link {% if current_endpoint == 'matrix_view' %}is-active{% endif %}">Cohort Matrix Editor</a>
+            <a href="{{ url_for('sandbox') }}" class="nav-link {% if current_endpoint == 'sandbox' %}is-active{% endif %}">Batch Matrix Sandbox</a>
+          </nav>
+          <div class="sidebar-footer">Python Activity-Based Learning<br>2D Nested Lists &amp; Matrix Stats</div>
+        </aside>
+      </div>
+    </div>
+    <div class="main-shell" id="main-shell">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button type="button" id="drawer-open" class="menu-toggle-btn" aria-label="Open menu" aria-expanded="false" aria-controls="drawer">☰</button>
+          <div>
+            <h1 class="page-heading">{% block page_title %}Student Marks Matrix Analysis{% endblock %}</h1>
+            <p class="page-subtitle">{% block page_subtitle %}Row-wise &amp; column-wise statistics, top performers &amp; low-average subject alerts{% endblock %}</p>
+          </div>
+        </div>
+        <div class="topbar-right">
+          <a href="{{ url_for('matrix_view') }}" class="btn btn-primary btn-sm">Edit Matrix</a>
+          <a href="{{ url_for('export_csv') }}" class="btn btn-outline btn-sm">Export CSV</a>
+        </div>
+      </header>
+      <main class="content-area">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}<div class="flash-stack">{% for cat, msg in messages %}<div class="alert alert-{{ cat }}"><span class="alert-tag">{{ cat | upper }}</span><span>{{ msg }}</span></div>{% endfor %}</div>{% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+  <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
