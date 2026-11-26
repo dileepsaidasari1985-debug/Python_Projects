@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Event Registration{% endblock %}
+{% block page_title %}Module 4: Campus Event Registration{% endblock %}
+{% block content %}
+<section class="card">
+  <div class="card-header"><h3>Register Student for Event</h3></div>
+  <form method="post" class="form-grid">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="field"><label for="ev_sid">Student</label><select id="ev_sid" name="student_id">{% for s in students %}<option value="{{ s.student_id }}">{{ s.student_id }} &mdash; {{ s.name }}</option>{% endfor %}</select></div>
+    <div class="field"><label for="event_code">Campus Event</label><select id="event_code" name="event_code">{% for e in event_summary %}<option value="{{ e.event_code }}">{{ e.event_code }} &mdash; {{ e.event_name }} ({{ e.seats_left }} left)</option>{% endfor %}</select></div>
+    <div class="field-full"><button type="submit" class="btn btn-primary">Register Student</button></div>
+  </form>
+</section>
+<div class="grid-2">
+  <section class="card">
+    <div class="card-header"><h3>Campus Events &amp; Capacity</h3></div>
+    <table>
+      <thead><tr><th>Code</th><th>Event</th><th>Date &amp; Venue</th><th>Seats</th></tr></thead>
+      <tbody>
+        {% for e in event_summary %}
+        <tr><th class="mono">{{ e.event_code }}</th><td>{{ e.event_name }}</td><td>{{ e.event_date }} &bull; {{ e.venue }}</td><td class="mono">{{ e.registered }}/{{ e.capacity }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  <section class="card">
+    <div class="card-header"><h3>Confirmed Registrations</h3></div>
+    <table>
+      <thead><tr><th>Student ID</th><th>Event Code</th><th>Timestamp</th></tr></thead>
+      <tbody>
+        {% for r in registrations %}
+        <tr><th class="mono">{{ r.student_id }}</th><td class="mono">{{ r.event_code }}</td><td class="small">{{ r.registered_at }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+</div>
+{% endblock %}

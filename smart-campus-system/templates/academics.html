@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Attendance &amp; Marks{% endblock %}
+{% block page_title %}Modules 2 &amp; 3: Attendance &amp; Marks Tracking{% endblock %}
+{% block content %}
+<div class="grid-2">
+  <section class="card">
+    <div class="card-header"><h3>Update Student Attendance</h3></div>
+    <form method="post" class="form-grid">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="action" value="attendance">
+      <div class="field field-full"><label for="att_sid">Student</label><select id="att_sid" name="student_id">{% for s in students %}<option value="{{ s.student_id }}">{{ s.student_id }} &mdash; {{ s.name }}</option>{% endfor %}</select></div>
+      <div class="field"><label for="attended">Attended Classes</label><input id="attended" name="attended" type="number" min="0" value="42" required></div>
+      <div class="field"><label for="total">Total Classes</label><input id="total" name="total" type="number" min="1" value="48" required></div>
+      <div class="field-full"><button type="submit" class="btn btn-primary">Save Attendance</button></div>
+    </form>
+  </section>
+
+  <section class="card">
+    <div class="card-header"><h3>Update Subject Marks</h3></div>
+    <form method="post" class="form-grid">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="action" value="marks">
+      <div class="field field-full"><label for="mk_sid">Student</label><select id="mk_sid" name="student_id">{% for s in students %}<option value="{{ s.student_id }}">{{ s.student_id }} &mdash; {{ s.name }}</option>{% endfor %}</select></div>
+      <div class="field"><label for="math_mark">Math</label><input id="math_mark" name="math_mark" type="number" min="0" max="100" value="88" required></div>
+      <div class="field"><label for="cs_mark">CS</label><input id="cs_mark" name="cs_mark" type="number" min="0" max="100" value="92" required></div>
+      <div class="field"><label for="eng_mark">English</label><input id="eng_mark" name="eng_mark" type="number" min="0" max="100" value="85" required></div>
+      <div class="field-full"><button type="submit" class="btn btn-primary">Save Marks</button></div>
+    </form>
+  </section>
+</div>
+
+<section class="card">
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>ID</th><th>Name</th><th>Attended / Total</th><th>Attendance Status</th><th>Math / CS / Eng</th><th>Average</th><th>Grade</th></tr></thead>
+      <tbody>
+        {% for s in students %}
+        <tr>
+          <th class="mono">{{ s.student_id }}</th><td>{{ s.name }}</td>
+          <td class="mono">{{ s.attended_classes }} / {{ s.total_classes }} ({{ s.attendance_pct }}%)</td>
+          <td>{% if s.attendance_pct < 75 %}<span class="badge badge-red">Shortage</span>{% else %}<span class="badge badge-green">Eligible</span>{% endif %}</td>
+          <td class="mono">{{ s.math_mark }} / {{ s.cs_mark }} / {{ s.eng_mark }}</td>
+          <td class="mono"><strong>{{ s.avg_marks }}%</strong></td>
+          <td><span class="badge badge-green">{{ s.grade }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

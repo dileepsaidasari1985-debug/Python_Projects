@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Student Records{% endblock %}
+{% block page_title %}Module 1: Student Records Management{% endblock %}
+{% block content %}
+<section class="card">
+  <div class="card-header"><h3>Register New Student</h3></div>
+  <form method="post" class="form-grid">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="field"><label for="student_id">Student ID</label><input id="student_id" name="student_id" placeholder="CAMP107" required></div>
+    <div class="field"><label for="name">Full Name</label><input id="name" name="name" placeholder="Karthik Menon" required></div>
+    <div class="field"><label for="department">Department</label><select id="department" name="department">{% for d in departments %}<option value="{{ d }}">{{ d }}</option>{% endfor %}</select></div>
+    <div class="field"><label for="year">Academic Year</label><select id="year" name="year">{% for y in years %}<option value="{{ y }}">{{ y }}</option>{% endfor %}</select></div>
+    <div class="field-full"><button type="submit" class="btn btn-primary">Register Student</button></div>
+  </form>
+</section>
+<section class="card">
+  <div class="card-header"><h3>Campus Directory ({{ students | length }})</h3></div>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>ID</th><th>Name</th><th>Department</th><th>Year</th><th>Attendance</th><th>Marks Avg</th><th>Grade</th></tr></thead>
+      <tbody>
+        {% for s in students %}
+        <tr>
+          <th class="mono">{{ s.student_id }}</th><td>{{ s.name }}</td><td>{{ s.department }}</td><td>{{ s.year }}</td>
+          <td class="mono">{{ s.attendance_pct }}%</td><td class="mono">{{ s.avg_marks }}%</td><td><span class="badge badge-green">{{ s.grade }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

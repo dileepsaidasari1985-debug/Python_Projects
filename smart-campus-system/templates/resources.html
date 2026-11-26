@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Resource Allocation{% endblock %}
+{% block page_title %}Module 5: Campus Resource Allocation{% endblock %}
+{% block content %}
+<section class="card">
+  <div class="card-header"><h3>Allocate Lab / Hall / Equipment</h3></div>
+  <form method="post" class="form-grid">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="field"><label for="resource_code">Resource</label><select id="resource_code" name="resource_code">{% for r in resources %}<option value="{{ r.resource_code }}">{{ r.resource_code }} &mdash; {{ r.resource_name }} ({{ r.status }})</option>{% endfor %}</select></div>
+    <div class="field"><label for="requester_id">Requester Student ID</label><select id="requester_id" name="requester_id">{% for s in students %}<option value="{{ s.student_id }}">{{ s.student_id }} &mdash; {{ s.name }}</option>{% endfor %}</select></div>
+    <div class="field"><label for="slot_label">Time Slot</label><input id="slot_label" name="slot_label" value="Fri 15:00-17:00" required></div>
+    <div class="field"><label for="purpose">Purpose</label><input id="purpose" name="purpose" value="Project Demo Session" required></div>
+    <div class="field-full"><button type="submit" class="btn btn-primary">Allocate Resource</button></div>
+  </form>
+</section>
+<div class="grid-2">
+  <section class="card">
+    <div class="card-header"><h3>Resource Registry</h3></div>
+    <table>
+      <thead><tr><th>Code</th><th>Resource</th><th>Kind</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for r in resources %}
+        <tr><th class="mono">{{ r.resource_code }}</th><td>{{ r.resource_name }}</td><td>{{ r.kind }}</td><td><span class="badge {% if r.status == 'Available' %}badge-green{% else %}badge-red{% endif %}">{{ r.status }}</span></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  <section class="card">
+    <div class="card-header"><h3>Active Allocations</h3></div>
+    <table>
+      <thead><tr><th>Resource</th><th>Requester</th><th>Slot</th><th>Purpose</th></tr></thead>
+      <tbody>
+        {% for a in allocations %}
+        <tr><th class="mono">{{ a.resource_code }}</th><td class="mono">{{ a.requester_id }}</td><td class="mono">{{ a.slot_label }}</td><td>{{ a.purpose }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+</div>
+{% endblock %}

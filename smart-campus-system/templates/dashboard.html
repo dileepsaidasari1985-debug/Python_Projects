@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<section class="hero-banner">
+  <div>
+    <span class="hero-tag">CASE STUDY #100 &bull; INTEGRATED MENU-DRIVEN SIMULATION</span>
+    <h2>Comprehensive Smart Campus Management</h2>
+    <p>Unified simulation combining student records, attendance shortage alerts, subject marks &amp; grades, capacity-checked event registrations, conflict-free resource allocation, and executive reporting (available via both Web UI and <code>cli_menu.py</code>).</p>
+  </div>
+  <div class="hero-actions">
+    <a href="{{ url_for('students_page') }}" class="btn btn-primary">Student Records</a>
+    <a href="{{ url_for('events_page') }}" class="btn btn-outline">Event Desk</a>
+  </div>
+</section>
+
+<section class="kpi-grid">
+  <div class="kpi-card"><div class="kpi-label">Enrolled Students</div><div class="kpi-value">{{ summary.total_students }}</div><div class="kpi-meta">{{ summary.honors_students | length }} Honors Scholars</div></div>
+  <div class="kpi-card"><div class="kpi-label">Avg Attendance</div><div class="kpi-value">{{ summary.avg_attendance }}%</div><div class="kpi-meta">{{ summary.shortage_students | length }} below 75%</div></div>
+  <div class="kpi-card"><div class="kpi-label">Academic Average</div><div class="kpi-value">{{ summary.avg_marks }}%</div><div class="kpi-meta">Across Math, CS &amp; English</div></div>
+  <div class="kpi-card"><div class="kpi-label">Events &amp; Resources</div><div class="kpi-value">{{ summary.total_registrations }} / {{ summary.total_allocations }}</div><div class="kpi-meta">Registrations &bull; Slot Bookings</div></div>
+</section>
+
+<section class="card">
+  <div class="card-header"><h3>Executive Campus Summary (ASCII Report)</h3><a href="{{ url_for('reports') }}" class="btn btn-outline btn-sm">Full Report</a></div>
+  <pre class="ascii-box">{{ summary.ascii_summary }}</pre>
+</section>
+{% endblock %}
