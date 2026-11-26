@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Exam Halls{% endblock %}
+{% block page_title %}Examination Hall Registry{% endblock %}
+{% block content %}
+<section class="card">
+  <div class="card-header"><h3>Add Exam Hall</h3></div>
+  <form method="post" class="form-grid">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="field"><label for="hall_name">Hall Code</label><input id="hall_name" name="hall_name" placeholder="HALL-305" required></div>
+    <div class="field"><label for="building">Building</label><input id="building" name="building" placeholder="Science Block" required></div>
+    <div class="field"><label for="rows">Rows</label><input id="rows" name="rows" type="number" min="1" max="20" value="5" required></div>
+    <div class="field"><label for="cols">Columns</label><input id="cols" name="cols" type="number" min="1" max="15" value="6" required></div>
+    <div class="field"><label for="fixed_capacity">Fixed Capacity</label><input id="fixed_capacity" name="fixed_capacity" type="number" min="1" value="18" required></div>
+    <div class="field"><label for="default_reserved">Default Reserved Seats</label><input id="default_reserved" name="default_reserved" value="A1:PROCTOR"></div>
+    <div class="field-full"><button type="submit" class="btn btn-primary">Save Hall</button></div>
+  </form>
+</section>
+<section class="card">
+  <div class="card-header"><h3>Configured Exam Halls ({{ halls | length }})</h3></div>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Hall</th><th>Building</th><th>Dimensions</th><th>Fixed Cap</th><th>Reserved Positions</th></tr></thead>
+      <tbody>
+        {% for h in halls %}
+        <tr><th class="mono">{{ h.hall_name }}</th><td>{{ h.building }}</td><td class="mono">{{ h.rows }}x{{ h.cols }} ({{ h.rows * h.cols }} seats)</td><td>{{ h.fixed_capacity }}</td><td class="mono small">{{ h.default_reserved }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

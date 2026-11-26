@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<section class="hero-banner">
+  <div>
+    <span class="hero-tag">CASE STUDY #26 &bull; NESTED LOOPS &amp; 2D MATRICES</span>
+    <h2>Nested Loop Examination Seating Generator</h2>
+    <p>Automatically map candidates onto 2D classroom grids with row/column identifiers, reserved proctor/accessible seats, checkerboard or column alternate seating, and strict fixed capacity caps.</p>
+  </div>
+  <div class="hero-actions">
+    <a href="{{ url_for('generator') }}" class="btn btn-primary">Open Seating Generator</a>
+    <a href="{{ url_for('halls') }}" class="btn btn-outline">Configure Halls</a>
+  </div>
+</section>
+
+<section class="kpi-grid">
+  <div class="kpi-card"><div class="kpi-label">Registered Halls</div><div class="kpi-value">{{ halls | length }}</div><div class="kpi-meta">Fixed capacity enforced</div></div>
+  <div class="kpi-card"><div class="kpi-label">Preview Assigned</div><div class="kpi-value">{{ preview_plan.assigned_count }}</div><div class="kpi-meta">Usable slots: {{ preview_plan.usable_seats }}</div></div>
+  <div class="kpi-card"><div class="kpi-label">Reserved &amp; Gaps</div><div class="kpi-value">{{ preview_plan.reserved_count }} / {{ preview_plan.gap_count }}</div><div class="kpi-meta">Proctor/Accessible &bull; Alt Gaps</div></div>
+  <div class="kpi-card"><div class="kpi-label">Saved Seating Plans</div><div class="kpi-value">{{ plans | length }}</div><div class="kpi-meta">Persisted in SQLite</div></div>
+</section>
+
+<section class="card">
+  <div class="card-header">
+    <h3>Live Preview: {{ preview_plan.hall_name }} ({{ preview_plan.rows }}x{{ preview_plan.cols }}, Cap {{ preview_plan.fixed_capacity }})</h3>
+    <a href="{{ url_for('generator') }}" class="btn btn-outline btn-sm">Customize Matrix</a>
+  </div>
+  <div class="seat-matrix">
+    <div class="blackboard-bar">INVIGILATOR DESK / BLACKBOARD (FRONT OF HALL)</div>
+    {% for row in preview_plan.matrix %}
+    <div class="seat-row">
+      <div class="seat-row-label">{{ row.row_label }}</div>
+      {% for cell in row.cells %}
+      <div class="seat-box is-{{ cell.status | lower }}">
+        <strong class="mono">{{ cell.seat_id }} ({{ cell.coord }})</strong>
+        <span>{{ cell.student }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

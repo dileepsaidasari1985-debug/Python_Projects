@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Seating Generator{% endblock %}
+{% block page_title %}Nested Loop Seating Generator{% endblock %}
+{% block page_subtitle %}Configure dimensions, reserved positions, alternate spacing &amp; student roll numbers{% endblock %}
+
+{% block content %}
+<section class="card">
+  <div class="card-header"><h3>Classroom &amp; Restriction Parameters</h3></div>
+  {% if errors %}
+    <div class="alert alert-danger" style="margin-bottom:1rem;">
+      <div>{% for e in errors %}<div>{{ e }}</div>{% endfor %}</div>
+    </div>
+  {% endif %}
+  <form method="post" class="form-grid">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="field"><label for="exam_title">Exam Title</label><input id="exam_title" name="exam_title" value="{{ form_data.exam_title }}" required></div>
+    <div class="field"><label for="hall_name">Hall Name</label><input id="hall_name" name="hall_name" value="{{ form_data.hall_name }}" required></div>
+    <div class="field"><label for="rows">Rows (1-20)</label><input id="rows" name="rows" type="number" min="1" max="20" value="{{ form_data.rows }}" required></div>
+    <div class="field"><label for="cols">Columns (1-15)</label><input id="cols" name="cols" type="number" min="1" max="15" value="{{ form_data.cols }}" required></div>
+    <div class="field"><label for="fixed_capacity">Fixed Classroom Capacity</label><input id="fixed_capacity" name="fixed_capacity" type="number" min="1" value="{{ form_data.fixed_capacity }}" required></div>
+    <div class="field">
+      <label for="seating_mode">Alternate Seating Restriction</label>
+      <select id="seating_mode" name="seating_mode">
+        {% for val, label in modes %}<option value="{{ val }}" {% if form_data.seating_mode == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field field-full"><label for="reserved_spec">Reserved Positions (e.g., A1:PROCTOR, A6:ACCESSIBLE, C3:BROKEN)</label><input id="reserved_spec" name="reserved_spec" class="mono" value="{{ form_data.reserved_spec }}"></div>
+    <div class="field field-full"><label for="students_text">Candidate Roll Numbers (comma or newline separated)</label><textarea id="students_text" name="students_text" rows="3" class="mono" required>{{ form_data.students_text }}</textarea></div>
+    <div class="field-full" style="display:flex;gap:0.65rem;flex-wrap:wrap;">
+      <button type="submit" name="action" value="preview" class="btn btn-primary">Generate Arrangement</button>
+      <button type="submit" name="action" value="save" class="btn btn-outline">Generate &amp; Save Plan</button>
+    </div>
+  </form>
+</section>
+
+{% if plan %}
+<section class="card">
+  <div class="card-header">
+    <h3>Generated Seating Grid &mdash; {{ plan.hall_name }}</h3>
+    <span class="small muted">Assigned: {{ plan.assigned_count }} | Reserved: {{ plan.reserved_count }} | Alt Gaps: {{ plan.gap_count }} | Cap Blocked: {{ plan.cap_blocked_count }} | Overflow: {{ plan.unassigned_students | length }}</span>
+  </div>
+  {% if plan.unassigned_students %}
+  <div class="alert alert-danger" style="margin-bottom:1rem;">
+    <strong>Overflow Students (Hall Capacity / Restrictions Reached):</strong> {{ plan.unassigned_students | join(", ") }}
+  </div>
+  {% endif %}
+  <div class="seat-matrix">
+    <div class="blackboard-bar">INVIGILATOR DESK / BLACKBOARD</div>
+    {% for row in plan.matrix %}
+    <div class="seat-row">
+      <div class="seat-row-label">{{ row.row_label }}</div>
+      {% for cell in row.cells %}
+      <div class="seat-box is-{{ cell.status | lower }}">
+        <strong class="mono">{{ cell.seat_id }} ({{ cell.coord }})</strong>
+        <span>{{ cell.student }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+  <h4 style="margin-top:1.25rem;">Nested Loop ASCII Seating Chart</h4>
+  <pre class="ascii-box">{{ plan.ascii_chart }}</pre>
+</section>
+{% endif %}
+{% endblock %}

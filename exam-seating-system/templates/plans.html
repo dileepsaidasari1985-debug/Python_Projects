@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Saved Plans{% endblock %}
+{% block page_title %}Saved Examination Seating Plans{% endblock %}
+{% block content %}
+<section class="card">
+  <div class="card-header"><h3>Archived Plans ({{ plans | length }})</h3><a href="{{ url_for('generator') }}" class="btn btn-primary btn-sm">New Plan</a></div>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Plan ID</th><th>Exam Title</th><th>Hall</th><th>Mode</th><th>Assigned / Overflow</th></tr></thead>
+      <tbody>
+        {% for p in plans %}
+        <tr>
+          <th><a href="{{ url_for('plan_detail', plan_id=p.plan_id) }}">{{ p.plan_id }}</a></th>
+          <td>{{ p.exam_title }}</td>
+          <td class="mono">{{ p.hall_name }}</td>
+          <td class="small">{{ p.seating_mode }}</td>
+          <td>{{ p.assigned_count }} seated / {{ p.overflow_count }} overflow</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
